@@ -89,7 +89,9 @@ int Slab_Free(void * ptr){
 
 void * NextFit_Alloc(int size){
 	
+	printf("grabbing alloc\n");
 	pthread_mutex_lock(&nextfitlock);
+	printf("grabbed alloc\n");
 
 	if(NEXT_FIT_FREE_HEADER == NULL){
 		pthread_mutex_unlock(&nextfitlock);
@@ -117,7 +119,12 @@ void * NextFit_Alloc(int size){
 			turn++;
 		}
 
-		//SEGFAULT HERE TODO	
+		if(curr == NULL && turn > 0) {
+			//meaning already loop alreay twice
+			break;
+		}
+
+		//SEGFAULT HERE TODO
 		if(curr->length >= size){
 			fitCount++;
 		}
@@ -128,10 +135,6 @@ void * NextFit_Alloc(int size){
 		}
 		
 		curr = curr->next;
-		if(curr == NULL && turn > 0) {
-			//meaning already loop alreay twice
-			break;
-		}
 	}
 
 	if(nextFit == NULL) {
@@ -166,15 +169,19 @@ void * NextFit_Alloc(int size){
 	ret->length = size;
 	ret->magic = (void *) MAGIC;
   char * charret = ((char *)(ret) + (int)sizeof(struct AllocatedHeader));
-	
+
+	printf("releasing alloc\n");
 	pthread_mutex_unlock(&nextfitlock);
+	printf("released alloc\n");
 
 	return charret;
 }
 
 int NextFit_Free(void * ptr){
-	
+
+	printf("grabbing free\n");	
 	pthread_mutex_lock(&nextfitlock);
+	printf("grabbed free\n");
 
 	/**
 	 * Pointers out of Bound
@@ -192,16 +199,18 @@ int NextFit_Free(void * ptr){
 	}
 
 	struct FreeHeader * newFree = (struct FreeHeader *)(alloted);
-	newFree->length = alloted->length;
 
+	/* handles freeing blocks with addresses smaller than  that of the current NEXT_FIT_FREE_HEADER */ 
 	if(NEXT_FIT_FREE_HEADER == NULL || newFree < NEXT_FIT_FREE_HEADER) {
 		newFree->next = NEXT_FIT_FREE_HEADER;
 		NEXT_FIT_FREE_HEADER = newFree;
 	}
+
+	/* handles freeing blocks with addresses great than that of the current NEXT_FIT_FREE_HEADER */
 	else {
 		struct FreeHeader * curr = NEXT_FIT_FREE_HEADER;
 		//SEGFAULT HERE TODO
-		while(curr->next != NULL){
+		while(curr != NULL && curr->next != NULL){
 			if((struct FreeHeader *)((char *)curr + curr->length + (int)(sizeof(struct FreeHeader))) == newFree) {
 				break;
 			}
@@ -214,32 +223,31 @@ int NextFit_Free(void * ptr){
 	/**
 	 * Do coalesce right
 	 */
-	 if((struct FreeHeader *)((char *)newFree + newFree->length + (int)sizeof(struct FreeHeader)) == newFree->next){
+	if((struct FreeHeader *)((char *)newFree + newFree->length + (int)sizeof(struct FreeHeader)) == newFree->next){
 
 	 	newFree->length += newFree->next->length + (int)sizeof(struct FreeHeader);
 	 	newFree->next = newFree->next->next;
 	 }
 
-	 /**
-	  * Do coalesce left
-	  */
 	 struct FreeHeader * prev;
 	 prev = NEXT_FIT_FREE_HEADER;
 
+	/**
+ 	 * Do coalesce left
+ 	 */
 	 while(prev != NULL && prev->next < newFree){
 	 	prev = prev->next;
 	 }
 
-	 /**
-	  * remove prev != NULL and dont blame me when yo ass get core dump
-	  */
 	if(prev != NULL && (struct FreeHeader *)((char *)prev + prev->length + (int)sizeof(struct FreeHeader)) == newFree){
 		
 		prev->length += newFree->length + (int)sizeof(struct FreeHeader);
 		prev->next = newFree->next;
 	}
 
+	printf("releasing free\n");
 	pthread_mutex_unlock(&nextfitlock);	
+	printf("releasing free\n");
 
 	return 0;
 }
