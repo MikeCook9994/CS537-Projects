@@ -1,0 +1,26 @@
+Name: Michael Cook
+CSL-ID: cook
+Name: Giang Nguyen
+CSL-ID: giang
+
+Implementation Details:
+The program implements a system stride scheduler. It does so by implementing
+a new scheduler implementation on xv6 as well as two new system calls. The
+scheduler sets a ticket value for process created on the system. Based off 
+the ticket values of all processes, a stride value is assigned that is
+inversely proportional to the number of tickets that it is given. This 
+operation is handled with the settickets system call. While proccesses 
+run over their life cycle, they acculate a pass value that is the sum of 
+stride values at the time the process is ran. The stride value of a process 
+can change over the life of the process. Also, it is theoretically possible 
+that the pass value can overflow for very long running jobs. When a process is
+introduced to the system or awakened from a sleeping state, it's pass value is
+updated to be that of the current lowest pass value on the sytem. This is 
+handled  by substracting the lowest pass value of processes currently on the 
+system when the selected process's pass value would overflow. The scheduler 
+selects processes by picking the process with current lowest pass value. Data 
+regarding proesses can be acquired by calling the getpinfo system call that 
+returns an array of pstat structures for every non unused process in the 
+system. The pstat structure contains information including the number of 
+tickets, the stride, the name, the number of times scheduled, and the pid of 
+the process.

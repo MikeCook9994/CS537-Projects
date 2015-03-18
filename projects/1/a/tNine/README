@@ -1,0 +1,27 @@
+Name: Michael Cook
+CSL-ID: cook
+Name:
+CSL-ID: 
+
+Implementation Details:
+usage: tnine [inputString1] [inputString2] ... [inputStringN]
+[inputStringN] a serious of integer representing T9 keypad inputs
+
+implementation:
+After allocating memory in an array 
+
+Sample input:
+tnine 43535382614362218143 4374 42327332
+
+Sample output:
+ILLUMINATI\n
+IS\n
+HERE\n
+2\t1\t\n
+3\t2\t\n
+4\t5\t\n
+5\t2\t\n
+6\t2\t\n
+7\t2\t\n
+8\t2\t\n
+9\t0\t\n

@@ -1,0 +1,23 @@
+Name: Michael Cook
+CSL-ID: cook
+Name:
+CSL-ID: 
+
+Implementation Details:
+usage: multable [tableRange]
+[tableRange] an integer between 1 and 10 (inclusive) 
+
+implementation:
+multable allocates memory equal to the square of the parameter provided,
+and then fills the allocated memory as if it were a 2D array of integers
+that represent a multiplication table. After filling the table it is
+printed to the console.
+
+Sample input:
+multable 4
+
+Sample output:
+1\t2\t3\t4\t\n
+2\t4\t6\t8\t\n
+3\t6\t8\t12\t\n
+4\t8\t12\t16\t\n
