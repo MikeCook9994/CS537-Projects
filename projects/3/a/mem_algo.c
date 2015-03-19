@@ -89,9 +89,7 @@ int Slab_Free(void * ptr){
 
 void * NextFit_Alloc(int size){
 	
-	printf("grabbing alloc\n");
 	pthread_mutex_lock(&nextfitlock);
-	printf("grabbed alloc\n");
 
 	if(NEXT_FIT_FREE_HEADER == NULL){
 		pthread_mutex_unlock(&nextfitlock);
@@ -110,30 +108,20 @@ void * NextFit_Alloc(int size){
 	curr = NEXT_FIT_FREE_HEADER;
 	nextFit = NULL;
 
-
-	/* REWRITE THIS STUFF */
-	while(fitCount < 2 && turn < 1) {		
-
+	while(fitCount < 2) {
+		if(turn > 1 && curr == NULL) {
+			break;
+		}
 		if(curr == NULL) {
 			curr = NEXT_FIT_FREE_HEADER;
 			turn++;
 		}
-
-		if(curr == NULL && turn > 0) {
-			//meaning already loop alreay twice
-			break;
-		}
-
-		//SEGFAULT HERE TODO
-		if(curr->length >= size){
+		if(curr->length >= size) {
 			fitCount++;
 		}
-	
-		if(fitCount > 1){
-			//ignore the first time we find a fit, only take the 2nd time
+		if(fitCount > 0){
 			nextFit = curr;
 		}
-		
 		curr = curr->next;
 	}
 
@@ -151,14 +139,12 @@ void * NextFit_Alloc(int size){
 		tmp->length = nextFit->length - size -(int)sizeof(struct FreeHeader);
 		nextFree = tmp;
 	}
-
 	
 	if(nextFit == NEXT_FIT_FREE_HEADER) {
 		NEXT_FIT_FREE_HEADER = nextFree;
 	}
 	else {
 		curr = NEXT_FIT_FREE_HEADER;
-		
 		while(curr->next != nextFit) {
 			curr = curr->next;
 		}
@@ -168,20 +154,15 @@ void * NextFit_Alloc(int size){
 	struct AllocatedHeader * ret = (struct AllocatedHeader *) (nextFit);
 	ret->length = size;
 	ret->magic = (void *) MAGIC;
-  char * charret = ((char *)(ret) + (int)sizeof(struct AllocatedHeader));
+  	void * charret = (void *)((char *)(ret) + (int)sizeof(struct AllocatedHeader));
 
-	printf("releasing alloc\n");
 	pthread_mutex_unlock(&nextfitlock);
-	printf("released alloc\n");
-
 	return charret;
 }
 
 int NextFit_Free(void * ptr){
 
-	printf("grabbing free\n");	
 	pthread_mutex_lock(&nextfitlock);
-	printf("grabbed free\n");
 
 	/**
 	 * Pointers out of Bound
@@ -192,8 +173,8 @@ int NextFit_Free(void * ptr){
 	}
 
 	struct AllocatedHeader * alloted = (struct AllocatedHeader *)((char *)(ptr) - (int)sizeof(struct AllocatedHeader));
-
-	if(alloted->magic != (void *)MAGIC){
+ 
+	if(alloted->magic != (void *) MAGIC && alloted->magic != &alloted->length){
 		pthread_mutex_unlock(&nextfitlock);
 		return -1;
 	}
@@ -210,44 +191,39 @@ int NextFit_Free(void * ptr){
 	else {
 		struct FreeHeader * curr = NEXT_FIT_FREE_HEADER;
 		//SEGFAULT HERE TODO
-		while(curr != NULL && curr->next != NULL){
-			if((struct FreeHeader *)((char *)curr + curr->length + (int)(sizeof(struct FreeHeader))) == newFree) {
+		while(curr->next != NULL && (struct FreeHeader *)((char *)curr + curr->length + (int)(sizeof(struct FreeHeader))) < newFree){
+			/*if((struct FreeHeader *)((char *)curr + curr->length + (int)(sizeof(struct FreeHeader))) == newFree) {
 				break;
-			}
+			}*/
 			curr = curr->next;
 		}
 		newFree->next = curr->next;
 		curr->next = newFree;
 	}
 
-	/**
-	 * Do coalesce right
-	 */
+   /**
+	* Do coalesce right
+	*/
 	if((struct FreeHeader *)((char *)newFree + newFree->length + (int)sizeof(struct FreeHeader)) == newFree->next){
-
 	 	newFree->length += newFree->next->length + (int)sizeof(struct FreeHeader);
-	 	newFree->next = newFree->next->next;
-	 }
+		newFree->next = newFree->next->next;
+	}
 
-	 struct FreeHeader * prev;
-	 prev = NEXT_FIT_FREE_HEADER;
+	struct FreeHeader * prev;
+	prev = NEXT_FIT_FREE_HEADER;
 
 	/**
  	 * Do coalesce left
  	 */
 	 while(prev != NULL && prev->next < newFree){
 	 	prev = prev->next;
-	 }
+	}
 
-	if(prev != NULL && (struct FreeHeader *)((char *)prev + prev->length + (int)sizeof(struct FreeHeader)) == newFree){
-		
+	if(prev != NULL && (struct FreeHeader *)((char *)prev + prev->length + (int)sizeof(struct FreeHeader)) == newFree){	
 		prev->length += newFree->length + (int)sizeof(struct FreeHeader);
 		prev->next = newFree->next;
 	}
 
-	printf("releasing free\n");
 	pthread_mutex_unlock(&nextfitlock);	
-	printf("releasing free\n");
-
 	return 0;
 }

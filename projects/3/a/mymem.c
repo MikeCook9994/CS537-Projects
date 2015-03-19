@@ -67,7 +67,6 @@ void * Mem_Init(int sizeOfRegion, int slabSize) {
 	NEXT_FIT_FREE_HEADER->next = NULL;
 	NEXT_FIT_FREE_HEADER->length = NEXT_FIT_REGION_SIZE - (int)sizeof(struct FreeHeader);
 
-
 	/**
 	 * Partition Slab Memory Region Into Equal Sized Pieces
 	 */
