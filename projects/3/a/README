@@ -4,6 +4,4 @@ Name: Giang Nguyen
 CSL-ID: Giang
 
 Implementation Details:
-~*~*~*~*~*~*~*~*~*~*~*~
-|  TO BE ADDED LATER  |
-~*~*~*~*~*~*~*~*~*~*~*~
+We did stuff that allocates and frees memory using a heap and slab allocator
