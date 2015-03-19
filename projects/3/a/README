@@ -1,7 +1,7 @@
 Name: Michael Cook
 CSL-ID: cook
 Name: Giang Nguyen
-CSL-ID: Giang
+CSL-ID: giang
 
 Implementation Details:
 We did stuff that allocates and frees memory using a heap and slab allocator
