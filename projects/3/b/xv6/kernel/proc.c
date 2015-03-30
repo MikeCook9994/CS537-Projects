@@ -107,9 +107,11 @@ int
 growproc(int n)
 {
   uint sz;
-  
+ 
   sz = proc->sz;
   if(n > 0){
+		if(PGROUNDUP(sz + n) >= proc->sz_stk) //CHANGE: returns -1 if the heap will grow next to the stack
+			return -1;
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
       return -1;
   } else if(n < 0){
