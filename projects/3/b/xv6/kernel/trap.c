@@ -34,6 +34,17 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+
+	/* CHANGE: handles growing the stack */
+	if(tf->trapno == T_PGFLT) {
+		uint addr = rcr2(); // grabs the address that caused the trap.
+		if((addr >= (proc->sz_stk - PGSIZE) && addr < proc->sz_stk) && (proc->sz_stk - PGSIZE != proc->sz)) {
+			allocuvm(proc->pgdir, proc->sz_stk - PGSIZE, proc->sz_stk);
+			proc->sz_stk -= PGSIZE;
+			return;
+		}
+	}
+
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();

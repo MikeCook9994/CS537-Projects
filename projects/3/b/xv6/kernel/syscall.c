@@ -18,7 +18,7 @@ int
 fetchint(struct proc *p, uint addr, int *ip)
 {
 /* CHANGE: verfies the address lies anywhere within the valid address space. */
-  if((((uint) addr < PGSIZE) && (proc->pid != 1)) || ((uint)(addr+4) > p->sz && (uint) addr < p->sz_stk) || (uint) (addr+4) > USERTOP)
+  if(((uint)addr < PGSIZE && p->pid != 1) || (((uint)addr >= p->sz || (uint)addr+4 > p->sz) && (uint)addr < p->sz_stk) || ((uint)addr >= USERTOP || (uint)addr+4 > USERTOP))
     return -1;
   *ip = *(int*)(addr);
   return 0;
@@ -33,7 +33,7 @@ fetchstr(struct proc *p, uint addr, char **pp)
   char *s, *ep;
 
 	//CHANGE: Same bounds checks as above
-  if((((uint) addr < PGSIZE) && (proc->pid != 1)) || ((uint)(addr+4) > p->sz && (uint) addr < p->sz_stk) || (uint) (addr+4) > USERTOP)
+  if(((uint)addr < PGSIZE && p->pid != 1) || (((uint)addr >= p->sz || (uint)addr+4 > p->sz) && (uint)addr < p->sz_stk) || ((uint)addr >= USERTOP || (uint)addr+4 > USERTOP))
     return -1;
   *pp = (char*)addr;
   ep = (char*)p->sz;
@@ -63,7 +63,7 @@ argptr(int n, char **pp, int size)
     return -1;
 
 	//CHANGE: Hella bounds checks
-	if((((uint) i < PGSIZE) && (proc->pid != 1)) || ((uint)(i + size) > proc->sz && (uint) i < proc->sz_stk) || (uint) (i + size) > USERTOP)
+	if(((uint)i < PGSIZE && proc->pid != 1) || (((uint)i >= proc->sz || (uint)i + size > proc->sz) && (uint)i < proc->sz_stk) || ((uint)i >= USERTOP || (uint)i+size > USERTOP))
 		return -1;
 	*pp = (char*)i;
   return 0;
