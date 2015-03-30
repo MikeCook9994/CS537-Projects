@@ -62,7 +62,7 @@ mainc(void)
   cinit();
   sti();           // enable inturrupts
   userinit();      // first user process
-  scheduler();     // start running processes
+	scheduler();     // start running processes
 }
 
 // common cpu init code
@@ -75,7 +75,7 @@ cinit(void) {
   vmenable();        // turn on paging
   cprintf("cpu%d: starting\n", cpu->id);
   idtinit();       // load idt register
-  xchg(&cpu->booted, 1); // tell bootothers() we're up
+	xchg(&cpu->booted, 1); // tell bootothers() we're up
 }
 
 // Common CPU setup code.

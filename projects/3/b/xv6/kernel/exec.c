@@ -11,7 +11,7 @@ exec(char *path, char **argv)
 {
   char *s, *last;
   int i, off;
-  uint argc, sz, sp, ustack[3+MAXARG+1];
+  uint argc, sz, sz_stk, sp, ustack[3+MAXARG+1];
   struct elfhdr elf;
   struct inode *ip;
   struct proghdr ph;
@@ -48,21 +48,25 @@ exec(char *path, char **argv)
   iunlockput(ip);
   ip = 0;
 
-  // Allocate a one-page stack at the next page boundary
-  sz = PGROUNDUP(sz);
-  if((sz = allocuvm(pgdir, sz, sz + PGSIZE)) == 0)
+	sz = PGROUNDUP(sz);
+
+  // CHANGE: Allocates the first page of the stack at the end of the user programs address space
+  if((allocuvm(pgdir, USERTOP - PGSIZE, USERTOP)) == 0) /* CHANGE: Increments the sz_stk value. Allocates the last page of the user space now instead */
     goto bad;
 
+	sz_stk = USERTOP - PGSIZE;
+
   // Push argument strings, prepare rest of stack in ustack.
-  sp = sz;
-  for(argc = 0; argv[argc]; argc++) {
+  sp = USERTOP; /* CHANGE: sets the stack pointer to the botom of the user space. */ 
+
+	for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)
-      goto bad;
+			goto bad;
     sp -= strlen(argv[argc]) + 1;
     sp &= ~3;
     if(copyout(pgdir, sp, argv[argc], strlen(argv[argc]) + 1) < 0)
-      goto bad;
-    ustack[3+argc] = sp;
+			goto bad;
+		ustack[3+argc] = sp;
   }
   ustack[3+argc] = 0;
 
@@ -75,7 +79,7 @@ exec(char *path, char **argv)
     goto bad;
 
   // Save program name for debugging.
-  for(last=s=path; *s; s++)
+	for(last=s=path; *s; s++)
     if(*s == '/')
       last = s+1;
   safestrcpy(proc->name, last, sizeof(proc->name));
@@ -84,9 +88,10 @@ exec(char *path, char **argv)
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;
+	proc->sz_stk = sz_stk;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
-  switchuvm(proc);
+	switchuvm(proc);
   freevm(oldpgdir);
 
   return 0;
