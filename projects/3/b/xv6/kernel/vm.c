@@ -296,6 +296,7 @@ freevm(pde_t *pgdir)
 
 // Given a parent process's page table, create a copy
 // of it for a child.
+// CHANGE: a new parameter for the starting address of the stack
 pde_t*
 copyuvm(pde_t *pgdir, uint sz, uint sz_stk)
 {
@@ -318,7 +319,8 @@ copyuvm(pde_t *pgdir, uint sz, uint sz_stk)
     if(mappages(d, (void*)i, PGSIZE, PADDR(mem), PTE_W|PTE_U) < 0)
       goto bad;
   }
-	
+
+	/* CHANGE: copies the stack */	
 	for(i = sz_stk; i < USERTOP; i += PGSIZE) {
 	  if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)
       panic("copyuvm: pte should exist");

@@ -17,7 +17,14 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
-  if(addr >= p->sz || addr+4 > p->sz)
+/* CHANGE: Makes the following checks to verify the provided address exists in allocated space. If any
+ * of these are true the check fails.
+ * 1) The beginning of the address address is not within heap/code section or
+ * 2) The end of the address is not within the heap/code section and
+ * 3) the address is above the stack or
+ * 4) the address is greater than the bottom of the stack (USERTOP)
+ */
+  if(((addr >= p->sz || addr+4 > p->sz) && (addr < (USERTOP - p->sz_stk))) || addr > USERTOP)
     return -1;
   *ip = *(int*)(addr);
   return 0;

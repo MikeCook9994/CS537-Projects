@@ -51,9 +51,10 @@ exec(char *path, char **argv)
 	sz = PGROUNDUP(sz);
 
   // CHANGE: Allocates the first page of the stack at the end of the user programs address space
-  if((allocuvm(pgdir, USERTOP - PGSIZE, USERTOP)) == 0) /* CHANGE: Increments the sz_stk value. Allocates the last page of the user space now instead */
+  if((allocuvm(pgdir, USERTOP - PGSIZE, USERTOP)) == 0)
     goto bad;
 
+	/* CHANGE: sets the sz_stk field equal to the top address of the stack */
 	sz_stk = USERTOP - PGSIZE;
 
   // Push argument strings, prepare rest of stack in ustack.
