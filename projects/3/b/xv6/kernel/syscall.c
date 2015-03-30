@@ -17,14 +17,8 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
-/* CHANGE: Makes the following checks to verify the provided address exists in allocated space. If any
- * of these are true the check fails.
- * 1) The beginning of the address address is not within heap/code section or
- * 2) The end of the address is not within the heap/code section and
- * 3) the address is above the stack or
- * 4) the address is greater than the bottom of the stack (USERTOP)
- */
-  if(((addr >= p->sz || addr+4 > p->sz) && (addr < (USERTOP - p->sz_stk))) || addr > USERTOP)
+/* CHANGE: verfies the address lies anywhere within the valid address space. */
+  if((((uint) addr < PGSIZE) && (proc->pid != 1)) || ((uint)(addr+4) > p->sz && (uint) addr < p->sz_stk) || (uint) (addr+4) > USERTOP)
     return -1;
   *ip = *(int*)(addr);
   return 0;
@@ -38,7 +32,8 @@ fetchstr(struct proc *p, uint addr, char **pp)
 {
   char *s, *ep;
 
-  if(addr >= p->sz)
+	//CHANGE: Same bounds checks as above
+  if((((uint) addr < PGSIZE) && (proc->pid != 1)) || ((uint)(addr+4) > p->sz && (uint) addr < p->sz_stk) || (uint) (addr+4) > USERTOP)
     return -1;
   *pp = (char*)addr;
   ep = (char*)p->sz;
@@ -58,6 +53,7 @@ argint(int n, int *ip)
 // Fetch the nth word-sized system call argument as a pointer
 // to a block of memory of size n bytes.  Check that the pointer
 // lies within the process address space.
+
 int
 argptr(int n, char **pp, int size)
 {
@@ -65,9 +61,11 @@ argptr(int n, char **pp, int size)
   
   if(argint(n, &i) < 0)
     return -1;
-  if(((uint)i >= proc->sz || (uint)i+size > proc->sz) || (uint) i < PGSIZE )
-    return -1;
-  *pp = (char*)i;
+
+	//CHANGE: Hella bounds checks
+	if((((uint) i < PGSIZE) && (proc->pid != 1)) || ((uint)(i + size) > proc->sz && (uint) i < proc->sz_stk) || (uint) (i + size) > USERTOP)
+		return -1;
+	*pp = (char*)i;
   return 0;
 }
 

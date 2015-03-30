@@ -142,6 +142,7 @@ fork(void)
     return -1;
   }
   np->sz = proc->sz;
+	np->sz_stk = proc->sz_stk; /* CHANGE: sets the st_stk variable for the child. */ 
   np->parent = proc;
   *np->tf = *proc->tf;
 
