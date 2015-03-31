@@ -18,7 +18,7 @@ int
 fetchint(struct proc *p, uint addr, int *ip)
 {
 /* CHANGE: verfies the address lies anywhere within the valid address space. */
-  if(((uint)addr < PGSIZE && p->pid != 1) || (((uint)addr >= p->sz || (uint)addr+4 > p->sz) && (uint)addr < p->sz_stk) || ((uint)addr >= USERTOP || (uint)addr+4 > USERTOP))
+  if((addr < PGSIZE && p->pid != 1) || ((addr >= p->sz || addr+4 > p->sz) && addr < p->sz_stk) || (addr >= USERTOP || addr+4 > USERTOP))
     return -1;
   *ip = *(int*)(addr);
   return 0;
@@ -33,13 +33,15 @@ fetchstr(struct proc *p, uint addr, char **pp)
   char *s, *ep;
 
 	//CHANGE: Same bounds checks as above
-  if(((uint)addr < PGSIZE && p->pid != 1) || (((uint)addr >= p->sz || (uint)addr+4 > p->sz) && (uint)addr < p->sz_stk) || ((uint)addr >= USERTOP || (uint)addr+4 > USERTOP))
+  if((addr < PGSIZE && p->pid != 1) || ((addr >= p->sz || addr+4 > p->sz) && addr < p->sz_stk) || (addr >= USERTOP || addr+4 > USERTOP))
     return -1;
   *pp = (char*)addr;
   ep = (char*)p->sz;
-  for(s = *pp; s < ep; s++)
-    if(*s == 0)
-      return s - *pp;
+	if(addr >= p->sz_stk) //CHANGE: Depending the region the address exists in, the end address is set appropiately
+		ep = (char*)USERTOP;
+	for(s = *pp; s < ep; s++)
+    if(*s == 0) 
+			return s - *pp;
   return -1;
 }
 
