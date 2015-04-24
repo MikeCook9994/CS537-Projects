@@ -175,6 +175,16 @@ rcr3(void)
   return val;
 }
 
+static inline int 
+fetch_and_add( int * variable, int value ) 
+{
+  asm volatile("lock; xaddl %%eax, %2;"
+                :"=a" (value)                  //Output
+                :"a" (value), "m" (*variable)  //Input
+                :"memory");
+  return value;
+  }
+
 // Layout of the trap frame built on the stack by the
 // hardware and by trapasm.S, and passed to trap().
 struct trapframe {

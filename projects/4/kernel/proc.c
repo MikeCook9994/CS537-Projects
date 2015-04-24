@@ -144,6 +144,7 @@ fork(void)
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
+  np->isThread = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -406,7 +407,122 @@ kill(int pid)
   release(&ptable.lock);
   return -1;
 }
+/*int 
+clone(void(*fcn)(void*), void *arg, void *stack)
+{
+  int i, pid;
+  struct proc *np;
+  uint ustack[2];
+  uint sp;
 
+// ALLOCATES A NEW THREAD //
+
+  // Allocate process.
+  if((np = allocproc()) == 0)
+    return -1;
+
+  //if a thread calls clone it makes its parent the parent of the new thread
+  if(proc->isThread == 1)
+    np->parent = proc->parent;
+  else  
+    np->parent = proc;
+
+  *np->tf = *proc->tf;
+  np->sz = proc->sz;
+  np->isThread = 1;
+  np->pgdir = proc->pgdir;
+
+  // Clear %eax so that fork returns 0 in the child.
+  np->tf->eax = 0;
+
+  for(i = 0; i < NOFILE; i++)
+    if(proc->ofile[i])
+      np->ofile[i] = filedup(proc->ofile[i]);
+  np->cwd = idup(proc->cwd);
+
+
+  pid = np->pid;
+  safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+// SETS UP THE STACK AND BEGINS EXECUTION AT THE STARTING FUNCTION //
+
+  // Push argument strings, prepare rest of stack in ustack.
+  sp = ((int)((char *)stack) + PGSIZE);
+
+  ustack[0] = 0xffffffff;  // fake return PC
+  ustack[1] = arg;  // argv pointer
+
+  if(copyout(proc->pgdir, sp, ustack, strlen(ustack)) < 0)
+    return -1;
+
+  // Commit to the user image.
+  np->tf->eip =  (int) fcn;  // main
+  np->tf->esp = sp;
+  np->state = RUNNABLE;
+  sched();
+
+  return pid;
+}*/
+
+int
+clone(void(*fcn)(void*), void *arg, void *stack) 
+{
+  int i, pid;
+  struct proc *np;
+  uint sp, ustack[3];
+
+// ALLOCATES A NEW THREAD //
+
+  // Allocate process.
+  if((np = allocproc()) == 0)
+    return -1;
+
+  //if a thread calls clone it makes its parent the parent of the new thread
+  if(proc->isThread == 1)
+    np->parent = proc->parent;
+  else  
+    np->parent = proc;
+
+  *np->tf = *proc->tf;
+  np->sz = proc->sz;
+  np->isThread = 1;
+  np->pgdir = proc->pgdir;
+
+  // Clear %eax so that fork returns 0 in the child.
+  np->tf->eax = 0;
+
+  for(i = 0; i < NOFILE; i++)
+    if(proc->ofile[i])
+      np->ofile[i] = filedup(proc->ofile[i]);
+  np->cwd = idup(proc->cwd);
+
+  pid = np->pid;
+  safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+  // Push argument strings, prepare rest of stack in ustack.
+  sp = ((uint)((char *)stack) + PGSIZE);;
+  ustack[2] = 0;
+
+  ustack[0] = 0xffffffff;  // fake return PC
+  ustack[1] = (uint) arg;
+
+  sp -= 12;
+  if(copyout(proc->pgdir, sp, ustack, 12) < 0)
+    return -1;
+
+  // Commit to the user image.s
+  proc->tf->eip = (uint) arg;  // main
+  proc->tf->esp = sp;
+  sched();
+
+  return 0;
+}
+
+int 
+join(int pid)
+{
+  return -1;
+}
 // Print a process listing to console.  For debugging.
 // Runs when user types ^P on console.
 // No lock to avoid wedging a stuck machine further.
