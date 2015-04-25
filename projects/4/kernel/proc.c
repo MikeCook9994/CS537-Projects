@@ -165,7 +165,7 @@ clone(void(*fcn)(void*), void *arg, void *stack)
 {
   int i, pid;
   struct proc *np;
-  uint sp, ustack[2];
+  uint * sp;// ustack[2];
 
 // ALLOCATES A NEW THREAD //
 
@@ -174,15 +174,21 @@ clone(void(*fcn)(void*), void *arg, void *stack)
     return -1;
 
   //if a thread calls clone it makes its parent the parent of the new thread
-  if(proc->isThread == 1)
+  if(proc->isThread == 1){
     np->parent = proc->parent;
-  else  
+    *np->tf = *proc->parent->tf;
+	np->sz = proc->parent->sz;
+	np->pgdir = proc->parent->pgdir;
+	}
+  else{  
     np->parent = proc;
-
-  *np->tf = *proc->tf;
-  np->sz = proc->sz;
+    *np->tf = *proc->tf;
+	np->sz = proc->sz;
+	np->pgdir = proc->pgdir;
+	}
+  
   np->isThread = 1;
-  np->pgdir = proc->pgdir;
+  np->state = RUNNABLE;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -198,21 +204,17 @@ clone(void(*fcn)(void*), void *arg, void *stack)
   //safestrcpy(np->name, "ThreadChildren", sizeof("ThreadChildren"));
 
   // Push argument strings, prepare rest of stack in ustack.
-  sp = ((uint)((char *)stack) + PGSIZE);;
-
-  ustack[0] = 0xffffffff;  // fake return PC
-  ustack[1] = (uint) arg;
-
-  sp -= 8;
-  if(copyout(proc->pgdir, sp, ustack, 8) < 0)
-    return -1;
+  sp = (uint *) ((char *)stack + PGSIZE);
+  sp -= 2;
+  sp[0] = 0xffffffff;  // fake return PC
+  sp[1] = (uint) arg;
 
   // Commit to the user image.s
   proc->tf->eip = (uint) fcn;  // main
-  proc->tf->esp = sp;
+  proc->tf->esp = (uint) sp;
 
-  np->state = RUNNABLE;
   cprintf("clone-pid-%d\n",pid);
+  switchuvm(np);
   //return pid on success not 0 yo
   return pid;
 }

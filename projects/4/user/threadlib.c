@@ -22,12 +22,13 @@ void lock_release(lock_t * lock) {
 
 int thread_create(void (*start_routine)(void*), void * arg) {
 	void * stack = malloc(8192);
+	uint temp = (uint) stack;
 	if(stack == NULL)
 		return -1;
 	if((uint)stack % 4096)
-		stack = stack + (4096 - (uint)stack % 4096);
+		temp = temp + (4096 - (uint)temp % 4096);
 	//printf(1,"TC-%p\n", start_routine);
-	int pid = clone(start_routine, arg, stack);
+	int pid = clone(start_routine, arg, (void *) temp);
 	printf(1, "thread_create-PID-%d\n", pid);
 	return pid;
 }

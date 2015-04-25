@@ -97,6 +97,7 @@ sys_clone(void) {
   char *fcn;
   if(argptr(0, &fcn, 4) < 0 || argptr(1, &arg, 4) < 0 || argptr(2, &stack, 4) < 0)
     return -1;
+  cprintf("[sys_clone] fcn : 0x%x | arg: 0x%x | stack: 0x%x\n", fcn, arg, stack);
   int pid = clone((void *)fcn,(void *) arg,(void *) stack);
   cprintf("SYS_CLONE-PID-%d\n", pid);
   return pid;
