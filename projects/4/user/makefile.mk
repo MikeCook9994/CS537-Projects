@@ -17,6 +17,7 @@ USER_PROGS := \
 	usertests\
 	wc\
 	zombie\
+	threadTest
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 

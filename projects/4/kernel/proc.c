@@ -172,35 +172,52 @@ exit(void)
   if(proc == initproc)
     panic("init exiting");
 
-  // Close all open files.
-  for(fd = 0; fd < NOFILE; fd++){
-    if(proc->ofile[fd]){
-      fileclose(proc->ofile[fd]);
-      proc->ofile[fd] = 0;
+  //handle the thread to exit as a process
+  if(proc->isThread == 0) {
+
+    //wait till all the parent's threads exit
+    while(join(-1) != -1) {}
+
+    // Close all open files.
+    for(fd = 0; fd < NOFILE; fd++){
+      if(proc->ofile[fd]){
+        fileclose(proc->ofile[fd]);
+        proc->ofile[fd] = 0;
+      }
     }
-  }
 
-  iput(proc->cwd);
-  proc->cwd = 0;
+    iput(proc->cwd);
+    proc->cwd = 0;
 
-  acquire(&ptable.lock);
+    acquire(&ptable.lock);
 
-  // Parent might be sleeping in wait().
-  wakeup1(proc->parent);
+    // Parent might be sleeping in wait().
+    wakeup1(proc->parent);
 
-  // Pass abandoned children to init.
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent == proc){
-      p->parent = initproc;
-      if(p->state == ZOMBIE)
+    // Pass abandoned children to init.
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent == proc){
+        p->parent = initproc;
+        if(p->state == ZOMBIE)
         wakeup1(initproc);
+      }
     }
-  }
 
-  // Jump into the scheduler, never to return.
-  proc->state = ZOMBIE;
-  sched();
-  panic("zombie exit");
+    // Jump into the scheduler, never to return.
+    proc->state = ZOMBIE;
+    sched();
+    panic("zombie exit");
+  }
+    
+  else {
+    acquire(&ptable.lock);
+
+    // Parent might be sleeping in wait().
+    wakeup1(proc->parent);
+    proc->state = ZOMBIE;
+    sched();
+    panic("zombie exit");
+  }
 }
 
 // Wait for a child process to exit and return its pid.
@@ -407,62 +424,6 @@ kill(int pid)
   release(&ptable.lock);
   return -1;
 }
-/*int 
-clone(void(*fcn)(void*), void *arg, void *stack)
-{
-  int i, pid;
-  struct proc *np;
-  uint ustack[2];
-  uint sp;
-
-// ALLOCATES A NEW THREAD //
-
-  // Allocate process.
-  if((np = allocproc()) == 0)
-    return -1;
-
-  //if a thread calls clone it makes its parent the parent of the new thread
-  if(proc->isThread == 1)
-    np->parent = proc->parent;
-  else  
-    np->parent = proc;
-
-  *np->tf = *proc->tf;
-  np->sz = proc->sz;
-  np->isThread = 1;
-  np->pgdir = proc->pgdir;
-
-  // Clear %eax so that fork returns 0 in the child.
-  np->tf->eax = 0;
-
-  for(i = 0; i < NOFILE; i++)
-    if(proc->ofile[i])
-      np->ofile[i] = filedup(proc->ofile[i]);
-  np->cwd = idup(proc->cwd);
-
-
-  pid = np->pid;
-  safestrcpy(np->name, proc->name, sizeof(proc->name));
-
-// SETS UP THE STACK AND BEGINS EXECUTION AT THE STARTING FUNCTION //
-
-  // Push argument strings, prepare rest of stack in ustack.
-  sp = ((int)((char *)stack) + PGSIZE);
-
-  ustack[0] = 0xffffffff;  // fake return PC
-  ustack[1] = arg;  // argv pointer
-
-  if(copyout(proc->pgdir, sp, ustack, strlen(ustack)) < 0)
-    return -1;
-
-  // Commit to the user image.
-  np->tf->eip =  (int) fcn;  // main
-  np->tf->esp = sp;
-  np->state = RUNNABLE;
-  sched();
-
-  return pid;
-}*/
 
 int
 clone(void(*fcn)(void*), void *arg, void *stack) 
@@ -513,7 +474,8 @@ clone(void(*fcn)(void*), void *arg, void *stack)
   // Commit to the user image.s
   proc->tf->eip = (uint) arg;  // main
   proc->tf->esp = sp;
-  sched();
+
+  np->state = RUNNABLE;
 
   return 0;
 }
@@ -521,8 +483,28 @@ clone(void(*fcn)(void*), void *arg, void *stack)
 int 
 join(int pid)
 {
-  return -1;
+  struct proc * waitProc, * p;
+  waitProc = NULL; 
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != UNUSED)
+      if(((pid == -1) || (p->pid == pid)) && (p->isThread == 1) && (p->parent == proc)) {
+        waitProc = p;
+        break;
+      }
+  }
+  release(&ptable.lock);
+
+  if(waitProc == NULL)
+    return -1;
+
+  
+
+  return waitProc->pid;
+
 }
+
 // Print a process listing to console.  For debugging.
 // Runs when user types ^P on console.
 // No lock to avoid wedging a stuck machine further.

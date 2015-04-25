@@ -18,6 +18,10 @@ void lock_release(lock_t * lock) {
 }
 
 int thread_create(void (*start_routine)(void*), void * arg) {
-	void * stack = malloc(4096);
+	void * stack = malloc(8192);
+	if(stack == NULL)
+		return -1;
+	if((uint)stack % 4096)
+		stack = stack + (4096 - (uint)stack % 4096);
 	return clone(start_routine, arg, stack);
 }
