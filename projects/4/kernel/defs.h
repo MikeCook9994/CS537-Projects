@@ -109,8 +109,10 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-int 			clone(void(*)(void*), void *, void *);
-int 			join(int);
+int 			clone(void(*fcn)(void*), void *arg, void *stack);
+int 			join(int pid);
+int 			cv_sleep(cond_t *);
+int 			cv_wake(cond_t *);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

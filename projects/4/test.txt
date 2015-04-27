@@ -1,0 +1,24 @@
+BuildTest, build test, 1
+Badclone, clone with bad stack argument, 1
+SbrkClone, call sbrk from thread and see changes in the parent, 1
+LockOrder, Test ticket lock ordering, 1
+ThreadOne, invoke threadcreate from another thread, 1
+JoinFour, invlode join from a child thread on another child thread, 1
+MultiSbrk, call sbrk from multiple threads, 1
+ParentExit, exiting parent must kill all child threads, 1
+CloneOne, clone and verify that address space is shared, 1
+CloneTwo, clone and play with the argument, 1
+CloneThree, clone copies file descriptors but does not share, 1
+CondOne, test cv_wait and cv_signal and cannot leave cv_wait without lock, 1
+CondTwo, test cv_wait and cv_signal and do not wakeup on wrong cv, 1
+CondThree, test cv_wait and cv_signal and signal and do not broadcast, 1
+JoinOne, clone and join syscalls, 1
+JoinTwo, join should not handle child processes (forked), 1
+JoinThree, join and not wait should handle threads, 1
+Locks, test lock correctness, 1
+NoExit, no exit call in thread and should trap at bogus address, 1
+Race, race condition in CV must atomically release lock and sleep, 1
+Size, check that address space size is updated in threads, 1
+Multi, multiple threads with some depth of function calls, 1
+ThreadOne, thread user library functions, 1
+Stack, set up stack correctly and without extra items, 1

@@ -183,8 +183,7 @@ fetch_and_add( int * variable, int value )
                 :"a" (value), "m" (*variable)  //Input
                 :"memory");
   return value;
-  }
-
+}
 // Layout of the trap frame built on the stack by the
 // hardware and by trapasm.S, and passed to trap().
 struct trapframe {

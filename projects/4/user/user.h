@@ -25,8 +25,10 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int clone(void (*)(void*), void *, void *);
-int join(int);
+int clone(void(*fcn)(void*), void *arg, void *stack);
+int join(int pid);
+int cv_sleep(cond_t *);
+int cv_wake(cond_t *);
 
 // user library functions (ulib.c)
 int stat(char*, struct stat*);
@@ -42,11 +44,12 @@ void* malloc(uint);
 void free(void*);
 int atoi(const char*);
 
+
 /* threadlib.c */
 
 //threads
-int thread_create(void (*) (void *), void *);
-int thread_join(int);
+int thread_create(void (*start_routine)(void*), void *arg);
+int thread_join(int pid);
 
 //locks
 void lock_init(lock_t *);
@@ -58,3 +61,4 @@ void cv_wait(cond_t *, lock_t *);
 void cv_signal(cond_t *);
 
 #endif // _USER_H_
+

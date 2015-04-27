@@ -49,9 +49,11 @@ sys_sbrk(void)
 
   if(argint(0, &n) < 0)
     return -1;
+  
   addr = proc->sz;
   if(growproc(n) < 0)
     return -1;
+
   return addr;
 }
 
@@ -89,25 +91,49 @@ sys_uptime(void)
   return xticks;
 }
 
-int 
-sys_clone(void) {
-  //grab asses arg
+int
+sys_clone(void)
+{
+//grab asses arg
   char *arg;
   char *stack;
   char *fcn;
   if(argptr(0, &fcn, 4) < 0 || argptr(1, &arg, 4) < 0 || argptr(2, &stack, 4) < 0)
     return -1;
-  cprintf("[sys_clone] fcn : 0x%x | arg: 0x%x | stack: 0x%x\n", fcn, arg, stack);
+
+  if((uint)stack % PGSIZE != 0 || (uint)stack+PGSIZE > proc->sz) 
+    return -1;
+
+  //cprintf("[sys_clone] fcn : 0x%x | arg: 0x%x | stack: 0x%x\n", fcn, arg, stack);
   int pid = clone((void *)fcn,(void *) arg,(void *) stack);
-  cprintf("SYS_CLONE-PID-%d\n", pid);
+  //cprintf("SYS_CLONE-PID-%d\n", pid);
   return pid;
 }
 
-int 
-sys_join(void) {
+int
+sys_join(void)
+{
   int pid;
   if(argint(0, &pid) < 0)
     return -1;
 
   return join(pid);
+}
+
+int
+sys_cv_sleep(void)
+{
+  char *cv;
+  argptr(0, &cv, 4);
+
+  return cv_sleep((cond_t *) cv);
+}
+
+int
+sys_cv_wake(void)
+{
+  char *cv;
+  argptr(0, &cv, 4);
+
+  return cv_wake((cond_t *) cv);
 }

@@ -13,27 +13,21 @@ void helloWorld() {
 }
 void helloZen() {
 	printf(1, "Hello Zen\n");
-	//exit();
+	exit();
 }
 void helloMike() {
 	printf(1, "Hello Mike\n");
-	thread_create(helloZen, NULL);
-	//exit();
+	int pid = thread_create(helloZen, NULL);
+	thread_join(pid);
+	exit();
 }
 int main(int argc, char * argv[]) {
-	//printf(1,"%p\n", (void *)helloWorld);
-	//printf(1,"%p\n", (void *)helloMike);
-	int pid = thread_create(helloWorld, NULL);
-	int pid1 = thread_create(helloMike, NULL);
 
-	/**
-	 * WTF pid == pid1 = 0???????????????
-	 */
-	printf(1, "pid-%d\n", pid); 
-	printf(1, "pid1-%d\n", pid1);
+	thread_create(helloWorld, NULL);
+	thread_create(helloMike, NULL);
 
-	thread_join(pid);
-	thread_join(pid1);
-	printf(1,"%s\n", "ciao"); // this should print after all children finish, so WEAIRDDDDDDDDDDDDDDDD
+	while(-1 != thread_join(-1)){}
+
+	printf(1,"%s\n", "ciao");
 	exit();
 }
