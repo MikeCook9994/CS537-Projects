@@ -247,6 +247,19 @@ exit(void)
   if(proc == initproc)
     panic("init exiting");
 
+	if(proc->isThread == 0) {
+		acquire(&ptable.lock);
+		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+			if(p->parent == proc) {
+				release(&ptable.lock);
+				kill(p->pid);
+				join(p->pid);
+				acquire(&ptable.lock);
+			}
+		}
+		release(&ptable.lock);
+	}
+
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
     if(proc->ofile[fd]){
