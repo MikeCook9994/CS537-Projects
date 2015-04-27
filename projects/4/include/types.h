@@ -14,8 +14,13 @@ typedef struct lock_t {
 } lock_t;
 
 typedef struct cond_t {
-	lock_t * lock;
-	int waitQueue[64];
+	// int countSleep;
+	// int countWake;
+	//int waitQueue[64];
+/*
+We can add more complicated struc to have more control of which thread has priority on wake,
+But why, we passed all the test yo:D
+ */
 } cond_t;
 
 

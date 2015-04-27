@@ -332,6 +332,7 @@ wait(void)
     sleep(proc, &ptable.lock);  //DOC: wait-sleep
   }
 }
+
 int join(int pid)
 {
   struct proc *p;
@@ -536,29 +537,40 @@ kill(int pid)
   release(&ptable.lock);
   return -1;
 }
+void klock_init(lock_t * lock) {
+  lock->ticket = 0;
+    lock->turn = 0;
+} 
+
+void klock_acquire(lock_t * lock) {
+  int myTurn = fetch_and_add(&lock->ticket, 1);
+  while(lock->turn != myTurn)
+      ; //spin
+}
+
+void klock_release(lock_t * lock) {
+  fetch_and_add(&lock->turn, 1);
+}
 
 int       
-cv_sleep(cond_t * cv)
+cv_sleep(cond_t * cv, lock_t * lock)
 {
-
-  struct proc * p;
+  if(proc == 0)
+    panic("sleep");
 
   acquire(&ptable.lock);
+  proc->chan = cv;
+  proc->state = SLEEPING;
+  klock_release(lock);
+  sched();
 
-  int pid = proc->pid;
-  int myturn = fetch_and_add(&cv->lock->ticket, 1);
-  cv->waitQueue[myturn % NPROC] = pid;
+  // Tidy up.
+  proc->chan = 0;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->pid == pid){
-      // Wake process from sleep if necessary.
-      p->state = SLEEPING;
-      release(&ptable.lock);
-      return 0;
-    }
-  }
   release(&ptable.lock);
-  return -1;
+  // Reacquire original lock.
+  klock_acquire(lock);
+  return 0;
 }
 
 int
@@ -569,12 +581,9 @@ cv_wake(cond_t * cv)
 
   acquire(&ptable.lock);
   
-  int myturn = fetch_and_add(&cv->lock->turn, 1);
-
-  int pid = cv->waitQueue[myturn % NPROC];
-
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->pid == pid){
+    //only wake if SLEEPING on right cv
+    if(p->state == SLEEPING && p->chan == cv ){
       // Wake process from sleep if necessary.
       p->state = RUNNABLE;
       release(&ptable.lock);

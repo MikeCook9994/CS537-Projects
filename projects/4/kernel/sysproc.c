@@ -124,9 +124,12 @@ int
 sys_cv_sleep(void)
 {
   char *cv;
+  char *lock;
   argptr(0, &cv, 4);
+  argptr(1, &lock, 4);
 
-  return cv_sleep((cond_t *) cv);
+
+  return cv_sleep((cond_t *) cv, (lock_t *) lock);
 }
 
 int

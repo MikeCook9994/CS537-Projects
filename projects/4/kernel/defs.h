@@ -111,7 +111,7 @@ void            wakeup(void*);
 void            yield(void);
 int 			clone(void(*fcn)(void*), void *arg, void *stack);
 int 			join(int pid);
-int 			cv_sleep(cond_t *);
+int 			cv_sleep(cond_t *, lock_t *);
 int 			cv_wake(cond_t *);
 
 // swtch.S

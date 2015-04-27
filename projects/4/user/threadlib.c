@@ -20,15 +20,13 @@ void lock_release(lock_t * lock) {
 }
 
 void cv_wait(cond_t * cv, lock_t * lock) {
-	lock_release(lock);
-	if(cv == NULL){
+
+	if(cv == NULL)
+	{
 		cv = (cond_t *) malloc(sizeof(cond_t));
-		lock_init(cv->lock);
 	}
 
-	cv_sleep(cv);
-
-	lock_acquire(lock);
+	cv_sleep(cv, lock);
 }
 
 void cv_signal(cond_t * cv) {
@@ -58,12 +56,12 @@ int thread_create(void (*start_routine)(void*), void * arg) {
 }
 int thread_join(int pid){
 
-/*	int ppid;
+	int ppid;
 	ppid = join(pid);
 	if(ppid == -1)
 		return -1;
 
-	stackRef * curr = head;
+/*	stackRef * curr = head;
 	stackRef * prev = NULL;
 	while(curr != NULL) {
 		if(curr->pid == ppid)
@@ -76,5 +74,5 @@ int thread_join(int pid){
 		prev->next = curr->next;
 		free(curr);
 */
-	return join(pid);
+	return ppid;
 }
