@@ -250,7 +250,8 @@ exit(void)
 	if(proc->isThread == 0) {
 		acquire(&ptable.lock);
 		for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-			if(p->parent == proc) {
+      //should only kill p if child of this proc and is a thread
+			if(p->parent == proc && p->isThread == 1) {
 				release(&ptable.lock);
 				kill(p->pid);
 				join(p->pid);
