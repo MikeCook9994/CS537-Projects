@@ -365,7 +365,7 @@ int join(int pid)
           ret_pid = p->pid;
 
           //free stack in thread_join userspace, have to make a global tracker, see threadLib
-          //kfree(p->kstack);
+          kfree(p->kstack);
           p->kstack = 0;
           //freevm(p->pgdir); freeing pgdir is job of process
           p->state = UNUSED;
