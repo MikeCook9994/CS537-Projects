@@ -129,6 +129,14 @@ int main(int charc, char * argv[]) {
 	//	printinode(inodeList + i);
 	}
 
+	/* seeks to the beginning of the inode bitmap */
+	seek(BSIZE * (1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */));
+
+	/* reads in the bit map */
+	for(i = 0; i < sb->ninodes; i++) {
+		assert(read(fsi, inodebitmap + i, sizeof(int)) != -1);
+	}
+
 	printf("FSCK complete. Exiting.\n");
 
 	return 0;	
