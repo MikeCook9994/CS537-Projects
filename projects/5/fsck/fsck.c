@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include "fs.h"
 
-int fsi;
+int fsd;
 struct superblock * sb;
 struct dinode * inodeList;
 struct stat * stats;
@@ -15,7 +15,7 @@ int * inodebitmap;
 
 /* Hard seeks to a place in the image file */
 int seek(int location) {
-	return (int) lseek(fsi, location, SEEK_SET);
+	return (int) lseek(fsd, location, SEEK_SET);
 }
 
 /* prints the contents of an inode */
@@ -81,11 +81,11 @@ int main(int charc, char * argv[]) {
 	assert(fstat != NULL);
 
 	/* attempts to open the provided fs image */
-	fsi = open(argv[1], O_RDWR);
-	assert(fsi != -1);
+	fsd = open(argv[1], O_RDWR);
+	assert(fsd != -1);
 
 	/* stats the file */
-	fstat(fsi, stats);
+	fstat(fsd, stats);
 
 	printf("*~*~*~*~*~*~*~*~*~*~*~*\n");
 	printf("*   WELCOME TO FSCK   *\n");
@@ -96,7 +96,7 @@ int main(int charc, char * argv[]) {
 	seek(BSIZE);
 
 	/* populates the superblock struct and prints its contents */
-	assert(read(fsi, sb, sizeof(struct superblock)) != -1);
+	assert(read(fsd, sb, sizeof(struct superblock)) != -1);
 	printf("CHECKING SUPER BLOCK CONTENTS\n");
 	printf("size:\t\t%d\n", sb->size);
 	printf("nblocks:\t%d\n", sb->nblocks);
@@ -125,7 +125,7 @@ int main(int charc, char * argv[]) {
 	/* populates the list of inodes for future access*/
 	int i;
 	for(i = 0; i < sb->ninodes; i++) {
-		assert(read(fsi, inodeList + i, sizeof(struct dinode)) != -1);
+		assert(read(fsd, inodeList + i, sizeof(struct dinode)) != -1);
 	//	printinode(inodeList + i);
 	}
 
@@ -134,7 +134,7 @@ int main(int charc, char * argv[]) {
 
 	/* reads in the bit map */
 	for(i = 0; i < sb->ninodes; i++) {
-		assert(read(fsi, inodebitmap + i, sizeof(int)) != -1);
+		assert(read(fsd, inodebitmap + i, sizeof(int)) != -1);
 	}
 
 	printf("FSCK complete. Exiting.\n");
