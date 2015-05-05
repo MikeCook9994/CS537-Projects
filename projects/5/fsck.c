@@ -11,13 +11,16 @@ int fsi;
 struct superblock * sb;
 struct dinode * inodeList;
 struct stat * stats;
+int * inodebitmap;
 
+/* Hard seeks to a place in the image file */
 int seek(int location) {
 	return (int) lseek(fsi, location, SEEK_SET);
 }
 
+/* prints the contents of an inode */
 void printinode(struct dinode * dinode) {
-	printf("type:\t\t\t%hd\n", dinode->type); //File type
+	printf("type:\t\t%hd\n", dinode->type); //File type
 	printf("major:\t\t%hd\n", dinode->major); // Major device number
 	printf("minor:\t\t%hd\n", dinode->minor); // Minor device number
 	printf("nlink:\t\t%hd\n", dinode->nlink); // Number of links to the inode on the system
@@ -40,18 +43,25 @@ void printinode(struct dinode * dinode) {
 
 /* sniffs the super block for inconsistent contents. */
 int sniffsb(uint * size, uint nblocks, uint ninodes) {
+	/* verifies the size is greater than zero */
 	if(*size <= 0)
 		return -1;
+	/* verifies the size is a multiple of the block size */
 	if(*size % BSIZE != 0)
 		return -1;
+	/* verifies the number of nodes is a multiple of the number of inodes per block */
 	if(ninodes % IPB != 0)
 		return -1;
+	/* if the number of inodes exceeds the size returns -1 */
 	if(ninodes > *size)
 		return -1;
+	 /* repairs the super block by correcting the size value if the size times block size 
+ 	 * does not equal the file size */
 	if(*size * BSIZE != (int) stats->st_size) {
 		printf("Repairing Superblock size value\n");
 		*size = stats->st_size / BSIZE;
 	}
+	/* the block doesn't smell */
 	return 0;
 }
 
@@ -65,8 +75,8 @@ int main(int charc, char * argv[]) {
 
 	/* allocates space for the superblock and file stats structs */
 	sb = malloc(sizeof(struct superblock));
-	stats = malloc(sizeof(struct stat));
-	
+	stats = malloc(sizeof(struct stat));	
+
 	assert(sb != NULL);
 	assert(fstat != NULL);
 
@@ -92,8 +102,9 @@ int main(int charc, char * argv[]) {
 	printf("nblocks:\t%d\n", sb->nblocks);
 	printf("ninodes:\t%d\n\n", sb->ninodes);
 
-	/* allocates space for enumerating the inodes */	
+	/* allocates space for enumerating the inodes and the inode bitmap*/	
 	inodeList = malloc(sizeof(struct dinode) * sb->ninodes);
+	inodebitmap = malloc(sizeof(int) * (sb->ninodes / IPB));
 	assert(inodeList != NULL);
 
 	/* a pointer to size value stored in the superblock that allows the super block to be repaired */
@@ -115,9 +126,9 @@ int main(int charc, char * argv[]) {
 	int i;
 	for(i = 0; i < sb->ninodes; i++) {
 		assert(read(fsi, inodeList + i, sizeof(struct dinode)) != -1);
-		printinode(inodeList + i);
+	//	printinode(inodeList + i);
 	}
-	
+
 	printf("FSCK complete. Exiting.\n");
 
 	return 0;	
