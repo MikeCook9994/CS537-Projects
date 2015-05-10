@@ -1,5 +1,8 @@
 all: lfsreader
 
+test:
+	lfsreader ls a example.img
+
 notfsck: lfsreader.o
 	gcc lfsreader.o -o lfsreader -Wall -Werror -m32
 
