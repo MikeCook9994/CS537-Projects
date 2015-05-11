@@ -1,7 +1,7 @@
 all: lfsreader
 
 test:
-	./lfsreader ls /dir/code/helloworld.c example.img > output.txt
+	./lfsreader ls /nested/directory/example/ example.img > output.txt
 
 notfsck: lfsreader.o
 	gcc lfsreader.o -o lfsreader -Wall -Werror -m32
