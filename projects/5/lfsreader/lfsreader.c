@@ -237,9 +237,8 @@ int main(int charc, char *argv[]) {
 		else
 			cat(finalinode);
 	}
-	else {
+	else
 		error();
-	}
 
 	return 0;
 }
