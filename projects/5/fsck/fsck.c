@@ -44,14 +44,6 @@ void printSuperBlock(void) {
 /* sniffs the super block for inconsistent contents. */
 int sniffsb(uint * size, uint nblocks, uint ninodes) {
 
-	/* repairs the super block by correcting the size value if the size times block size 
- 	 * does not equal the file size */
-	if(*size * BSIZE != (int) stats->st_size) {
-		printf("Repairing Superblock size value\n\n");
-		*size = stats->st_size / BSIZE;
-		seek(BSIZE);
-		write(fsd, size, 4);
-	}
 	/* verifies the size is greater than zero */
 	if(*size <= 0)
 		return -1;
@@ -65,6 +57,14 @@ int sniffsb(uint * size, uint nblocks, uint ninodes) {
 	   the number of data blocks plus the number of inode blocks */
 	if(nblocks + (ninodes / IPB) > *size)
 		return -1;
+	/* repairs the super block by correcting the size value if the size times block size 
+ 	 * does not equal the file size */
+	if(*size * BSIZE != (int) stats->st_size) {
+		printf("Repairing Superblock size value\n\n");
+		*size = stats->st_size / BSIZE;
+		seek(BSIZE);
+		write(fsd, size, 4);
+	}
 	/* the block doesn't smell */
 	return 0;
 }

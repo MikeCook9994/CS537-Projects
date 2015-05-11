@@ -9,21 +9,57 @@
 #include <assert.h>
 #include "structdefs.h"
 
-int fsd;
-checkpoint * ckpt;
-inodeMap * imap[INODEPIECES];
+typedef struct node {
+	char * string;
+	struct node * next;
+} Node;
 
-int seek(int location) {
-	return (int) lseek(fsd, location, SEEK_SET);
+int fsd;
+
+void seek(int location) {
+	assert(lseek(fsd, location, SEEK_SET) != -1);
+}
+
+void peruse(void * buf, int count) {
+	assert(read(fsd, buf, count) != -1);
 }
 
 void error(void) {
 	printf("Error!\n");
-	exit(0);
+}
+
+struct node * tokenizeString(char * string) {
+	
+	char * token;
+
+	Node * head;
+	head = malloc(sizeof(Node));
+	
+	Node * curr;
+	curr = head;
+
+	head->string = strtok(string, "/\0\n");
+	head->next = NULL;
+	
+	while(1) {
+		token = strtok(NULL, "/\0\n");
+		if(token == NULL) {
+			break;
+		}
+		Node * tmp;
+		tmp = malloc(sizeof(Node));
+
+		tmp->string = token;
+		tmp->next = NULL;
+		curr->next = tmp;
+		curr = tmp;
+	}
+
+	return head;
 }
 
 int main(int charc, char *argv[]) {
-	
+
 	/* some basic argument checks */
 	if(charc != 4)
 		error();
@@ -35,23 +71,31 @@ int main(int charc, char *argv[]) {
 	if(fsd < 0)
 		error();
 
+	checkpoint * ckpt;
+	inodeMap * rootinodeMap;
+	inode * rootiNode;
+	Node * head;
+
+	/* tokenizes the path */
+	head = tokenizeString(argv[2]);
+
 	/* allocates space for the checkpoint region struct */
 	ckpt = malloc(sizeof(checkpoint));
 
 	/* reads in the checkpoint region */
-	assert(read(fsd, ckpt, sizeof(checkpoint)) != -1);	
+	peruse(ckpt, sizeof(checkpoint));
 
+	/* reads in the first iNode Map that contains the root iNode */
+	rootinodeMap = malloc(sizeof(inodeMap));
+	seek(ckpt->iMapPtr[0]);
+	peruse(rootinodeMap, sizeof(inodeMap));
 
-	/* locates all the imap regions and sticks them in an array for latter access */
-	int i;
-	for(i = 0; i < INODEPIECES; i++) {
-			imap[i] = (ckpt->iMapPtr[i] + (void *)ckpt); 
-			printf("imap[%d] address: %p\n", i, imap[i]);
-			int j;
-			for(j = 0; j < 16; j++) {
-			printf("imap[%d]->inodePtr[%d]: %d\n", i, j, imap[i]->inodePtr[j]);
-		} 
-	}
+	/* reads in the first inode Map that contasins the root iNode */
+	rootiNode = malloc(sizeof(inode));
+	seek(rootinodeMap->inodePtr[0]);
+	peruse(rootiNode, sizeof(inode));
+
 	
+
 	return 0;
 }
