@@ -14,51 +14,26 @@ typedef struct node {
 	struct node * next;
 } Node;
 
+checkpoint * ckpt;
 int fsd;
 
-void seek(int location) {
-	assert(lseek(fsd, location, SEEK_SET) != -1);
+int seek(int location) {
+	int returnval;
+	returnval = lseek(fsd, location, SEEK_SET);
+	assert(returnval != -1);
+	return returnval;
 }
 
-void peruse(void * buf, int count) {
-	assert(read(fsd, buf, count) != -1);
+int peruse(void * buf, int count) {
+	int returnval;
+	returnval = read(fsd, buf, count);
+	assert(returnval != -1);
+	return returnval;
 }
 
 void error(void) {
 	printf("Error!\n");
 	exit(0);
-}
-
-void printckpt(checkpoint * ckpt) {
-	printf("ckpt->size = %d\n", ckpt->size);
-	int i;
-	for(i = 0; i < INODEPIECES; i++) {
-		printf("ckpt->iMapPtr[%d] = %d\n", i, ckpt->iMapPtr[i]);
-	}
-}
-
-void printdir(dirEnt * dir) {
-	printf("dir->name = %s\n", dir->name);
-	printf("dir->inum = %d\n", dir->inum);
-}
-
-void printinode(inode * inode) {
-	printf("inode->size = %d\n", inode->size);
-	if(inode->type == 0)
-		printf("inode->type = MFS_DIRECTORY\n");
-	else
-		printf("inode->type = MFS_REGULAR_FILE\n");
-	int i;
-	for(i = 0; i < 14; i++) {
-		printf("inode->ptr[%d] = %d\n", i, inode->ptr[i]);
-	}
-}
-
-void printinodeMap(inodeMap * inodemap) {
-	int i;
-	for(i = 0; i < 16; i++) {
-		printf("inodemap->inodePtr[%d] = %d\n", i, inodemap->inodePtr[i]);
-	}
 }
 
 struct node * tokenizeString(char * string) {
@@ -72,8 +47,11 @@ struct node * tokenizeString(char * string) {
 	curr = head;
 
 	head->string = strtok(string, "/\0\n");
+	if(head->string == NULL)
+		return NULL;
 	head->next = NULL;
 	
+
 	while(1) {
 		token = strtok(NULL, "/\0\n");
 		if(token == NULL) {
@@ -91,7 +69,7 @@ struct node * tokenizeString(char * string) {
 	return head;
 }
 
-int findinode(inode * inode, char * string) {
+int getinodenum(inode * inode, char * string) {
 
 	int i;
 	for(i = 0; i < 14; i++) {
@@ -116,22 +94,52 @@ int findinode(inode * inode, char * string) {
 	return -1;
 }
 
-void ls(inode * inode) {
+inode * getinode(int inodenum, int offset) {
+	
+	inode * retinode;
+	retinode = malloc(sizeof(inode));
+
+	inodeMap * tmp;
+	tmp = malloc(sizeof(inodeMap));
+
+	seek(ckpt->iMapPtr[inodenum / 16]);
+	peruse(tmp, sizeof(inodeMap));
+
+	seek(tmp->inodePtr[inodenum % 16]);
+	peruse(retinode, sizeof(inode));
+
+	seek(offset);
+
+	return retinode;
+}
+
+void ls(inode * dirinode) {
 	int i;
 	for(i = 0; i < 14; i++) {
-		if(inode->ptr[i] == -1)
+		if(dirinode->ptr[i] == -1)
 			break;
-		
-		seek(inode->ptr[i]);
+
+		int currOffset;
+		currOffset = dirinode->ptr[i];
+
+		seek(currOffset);
 		
 		dirEnt * tmp;
 		tmp = malloc(sizeof(dirEnt));
 
 		while(1) {
-			peruse(tmp, sizeof(dirEnt));
-			if(tmp->inum == -1)
+
+			currOffset += peruse(tmp, sizeof(dirEnt));
+			if(tmp->inum == -1) 
 				break;
-			printf("%s\n", tmp->name);
+
+			inode * tmpinode;
+			tmpinode = getinode(tmp->inum, currOffset);
+
+			if(tmpinode->type == 0)
+				printf("%s/\n", tmp->name);
+			else
+				printf("%s\n", tmp->name);
 		}	
 	}
 }
@@ -173,7 +181,6 @@ int main(int charc, char *argv[]) {
 	if(fsd < 0)
 		error();
 
-	checkpoint * ckpt;
 	inodeMap * rootinodeMap;
 	inode * rootiNode;
 	Node * head;
@@ -208,19 +215,12 @@ int main(int charc, char *argv[]) {
 
 	/* navaigates to the highest level directory or file based on the path name */
 	while(curr != NULL) {
-		currinodenum = findinode(currinode, curr->string);
+		currinodenum = getinodenum(currinode, curr->string);
 		if(currinodenum == -1)
 			error();
 		curr = curr->next;
-
-		inodeMap * tmp;
-		tmp = malloc(sizeof(inodeMap));
-		
-		seek(ckpt->iMapPtr[currinodenum / 16]);
-		peruse(tmp, sizeof(inodeMap));
-
-		seek(tmp->inodePtr[currinodenum % 16]);
-		peruse(currinode, sizeof(inode));
+	
+		currinode = getinode(currinodenum, rootinodeMap->inodePtr[0]);
 	}
 
 	inode * finalinode = currinode;
