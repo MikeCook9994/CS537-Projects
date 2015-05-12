@@ -14,7 +14,7 @@ int fsd;
 struct superblock * sb;
 struct dinode * inodeList;
 struct stat * stats;
-char * inodebitmap;
+char * databitmap;
 
 /* Hard seeks to a place in the image file */
 int seek(int location) {
@@ -84,18 +84,20 @@ void clearinode(struct dinode * inode) {
 }
 
 void checkinode(struct dinode * inode) {
-	//TODO
+	
 }
 
 void setbit(int datablock) {
 
+	//printf("%d\n", datablock);
+
 	char byte;
-	byte = inodebitmap[datablock / 8];
+	byte = databitmap[datablock / 8];
 	
 	char mask;
 	mask = 1 << datablock % 8;
-	
-	inodebitmap[datablock / 8] = byte & mask;
+
+	databitmap[datablock / 8] = byte | mask;
 }
 
 void constructbitmap(void) {
@@ -105,6 +107,10 @@ void constructbitmap(void) {
 	uint * indirectblock;
 
 	int i;
+	for(i = 0; i < 1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */ + 1 /* garbage bitmap block */; i++) {
+		setbit(i);
+	}	
+
 	int j;
 	for(i = 0; i < sb->ninodes; i++) {
 
@@ -114,12 +120,13 @@ void constructbitmap(void) {
 			addr = tmp->addrs[j];
 			if(addr == 0)
 				break;
-			setbit(BBLOCK(addr, sb->ninodes));
+			setbit(addr);
 		}
 
 		addr = tmp->addrs[NDIRECT];
 		if(addr == 0) 
 			continue;
+		setbit(addr);
 
 		indirectblock = malloc(BSIZE);
 		seek(addr * BSIZE);
@@ -128,7 +135,7 @@ void constructbitmap(void) {
 			addr = *(indirectblock + j);
 			if(addr == 0)
 				break;
-			setbit(BBLOCK(addr,sb->ninodes));
+			setbit(addr);
 		}
 	}
 }
@@ -183,20 +190,21 @@ int main(int charc, char * argv[]) {
 	int i;
 	for(i = 0; i < sb->ninodes; i++) {
 		assert(read(fsd, inodeList + i, sizeof(struct dinode)) != -1);
+		//printinode(inodeList + i);
 	}
-	write(fsd, inodeList, (sizeof(inodeList)));
 
-	inodebitmap = malloc(sb->nblocks / 8 + 1) ;
-	assert(inodebitmap != NULL);
-	memset(inodebitmap, 0, sb->nblocks / 8 + 1);
+	databitmap = malloc(sb->nblocks / 8 + 1);
+	assert(databitmap != NULL);
+	memset(databitmap, 0, sb->nblocks / 8 + 1);
 
 	/* checks through the inodes to construct a correct inode bitmap */
 	constructbitmap();
 
-	for(i = 0; i < sb->nblocks / 8 + 1; i++) {
-		printf("%x ", *(inodebitmap + i));
-	}
-	printf("\n");
+	seek(1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */);
+
+	write(fsd, databitmap, BSIZE);
+
+
 
 	close(fsd);	
 
