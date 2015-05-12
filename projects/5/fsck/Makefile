@@ -1,7 +1,7 @@
 all: myfsck
 
 test:
-	python ~cs537-1/testing/p5b/FSCKTest.pyc . > ./logs/testoutput.txt
+	python ~cs537-1/testing/p5b/FSCKTest.pyc .
 
 img1:
 	./myfsck ./images/image1.img > ./logs/output1.txt
