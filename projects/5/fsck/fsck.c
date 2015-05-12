@@ -90,22 +90,20 @@ void clearinode(struct dinode * inode) {
 	memset(inode, 0, sizeof(struct dinode));
 }
 
-void checkinode(struct dinode * inode) {
+void checkInodeState(struct dinode * inode) {
 
-	if(inode->type == 0) {
-		return;	
-	}
-	if(inode->nlink == 0 || inode->nlink >= MAXFILE) {
+	/* checks the inode reference count */
+	if(inode->type == 0)
+		return;
+	if(inode->nlink == 0 || inode->nlink >= MAXFILE)
 		clearinode(inode);	
-	}
 	/* checks the inode type */
-	if(inode->type > 3 || inode->type < 0) {
+	if(inode->type > 3 || inode->type < 0)
 		clearinode(inode);
-	}
-	if(inode->size < 0 || inode->size > (sb->size * BSIZE)) {
+	if(inode->size < 0 || inode->size > (MAXFILE * BSIZE))
 		clearinode(inode);
-	}
 }
+
 
 void setbit(int datablock) {
 
@@ -130,14 +128,14 @@ void constructbitmap(void) {
 	}	
 
 	int j;
-	for(i = 0; i < sb->ninodes; i++) {
+	for(i = ROOTINO; i < sb->ninodes; i++) {
 
 		tmp = inodeList + i;
 
 		for(j = 0; j < NDIRECT; j++) {
 			addr = tmp->addrs[j];
 			if(addr == 0)
-				break;
+				continue;
 			setbit(addr);
 		}
 
@@ -152,7 +150,7 @@ void constructbitmap(void) {
 		for(j = 0; j < BSIZE / 4; j++) {
 			addr = *(indirectblock + j);
 			if(addr == 0)
-				break;
+				continue;
 			setbit(addr);
 		}
 	}
@@ -166,7 +164,7 @@ int main(int charc, char * argv[]) {
 		exit(0);
 	}
 
-	// allocates space for the superblock and file stats structs */
+	/* allocates space for the superblock and file stats structs */
 	sb = malloc(sizeof(struct superblock));
 	assert(sb != NULL);	
 
@@ -197,42 +195,36 @@ int main(int charc, char * argv[]) {
 		exit(0);
 	}
 
-	/* allocates space for enumerating the inodes and the inode bitmap */	
+	/* allocates space for enumerating data bitmap */	
 	inodeList = malloc(sizeof(struct dinode) * sb->ninodes);	
 	assert(inodeList != NULL);
 
-	/* skips the garbage inode and sets you to the root inode */
-	seek(BSIZE * IBLOCK(1) + sizeof(struct dinode));
+	/* sets you to the root inode */
+	seek(BSIZE * IBLOCK(0));
 
 	/* populates the list of inodes for future access */
-	int i;
-	for(i = 0; i < sb->ninodes; i++) {
-		peruse(inodeList + i, sizeof(struct dinode));
-		checkinode(inodeList + i);
-	}
+	peruse(inodeList, sizeof(struct dinode) * sb->ninodes);
 
+	/* allocates memory for the bit map */
 	databitmap = malloc(sb->nblocks / 8 + 1);
 	assert(databitmap != NULL);
-	
-	seek((1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */) * BSIZE);
-	peruse(databitmap, sb->nblocks / 8 + 1);
 
 	/* checks through the inodes to construct a correct inode bitmap */
-
 	constructbitmap();
 
+	/* writes the bit map to the file */
 	seek((1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */) * BSIZE);
-
 	write(fsd, databitmap, BSIZE);
 
-	for(i = 0; i < sb->ninodes; i++) {
-		checkinode(inodeList + i);
+	/* handle the inode and directory stuff */
+	int i;
+	for(i = ROOTINO; i < sb->ninodes; i++) {
+		checkInodeState(inodeList + i);
 	}
 
 	constructbitmap();
 
 	seek((1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */) * BSIZE);
-
 	write(fsd, databitmap, BSIZE);	
 
 	close(fsd);	

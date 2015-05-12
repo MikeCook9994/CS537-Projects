@@ -1,33 +1,51 @@
 all: myfsck
 
+scp cook@best-linux.cs.wisc.edu:~cs537-1/testing/p5b/images/.img
+
 test:
-	python ~cs537-1/testing/p5b/FSCKTest.pyc .
+	python ~cs537-1/testing/p5b/FSCKTest .
 
-img1:
-	./myfsck ./images/image1.img > ./logs/output1.txt
-	cp ./badimages/image1.img images/
-	cat ./logs/output1.txt
+baddir:
+	./myfsck ./images/baddirectory.img > ./logs/baddirectory.txt
+	rm -f ./images/baddirectory.img
+	cp ./corruptedimages/baddirectory.img ./images
+	cat ./logs/baddirectory.txt
 
-img2:
-	./myfsck ./images/image2.img > ./logs/output2.txt
-	cp ./badimages/image2.img images/
-	cat ./logs/output2.txt
+badlink:
+	./myfsck ./images/badlinkcount.img > ./logs/badlinkcount.txt
+	rm -f ./images/badlinkcount.img
+	cp ./corruptedimages/badlinkcount.img ./images
+	cat ./logs/badlink.txt
 
-img3:
-	./myfsck ./images/image3.img > ./logs/output3.txt
-	cp ./badimages/image3.img images/
-	cat ./logs/output3.txt
+badsb:
+	./myfsck ./images/badsuperblock.img > ./logs/badsuperblock.txt
+	rm -f ./images/badsuperblock.img
+	cp ./corruptedimages/badsuperblock.img ./images
+	cat ./logs/badsuperblock.txt
 
-img4:
-	./myfsck ./images/image4.img > ./logs/output4.txt
-	cp ./badimages/image4.img images/
-	cat ./logs/output4.txt
+badtype:
+	./myfsck ./images/badtype.img > ./logs/badtype.txt
+	rm -f ./images/badtype.img
+	cp ./corruptedimages/badtype.img ./images
+	cat ./logs/badtype.txt
+
+noref:
+	./myfsck ./images/noreferenceinode.img > ./logs/noref.txt
+	rm -f ./images/noreferenceinode.img
+	cp ./corruptedimages/noreferenceinode.img ./images
+	cat ./logs/noref.txt
+
+notfree:
+	./myfsck ./images/blocknotfree.img > ./logs/notfree.txt
+	rm -f ./images/blocknotfree.img
+	cp ./corruptedimages/blocknotfree.img ./images
+	cat ./logs/notfree.txt
 
 wsb:
-	./myfsck ./images/wrongsizesb.img > ./logs/wrongsizesb.txt
+	./myfsck ./images/wrongsizesb.img > ./logs/wsb.txt
 	rm -f ./images/wrongsizesb.img
-	scp cook@best-linux.cs.wisc.edu:~cs537-1/testing/p5b/images/wrongsizesb.img ./images/.
-	cat ./logs/wrongsizesb.txt
+	cp ./corruptedimages/wrongsizesb.img ./images
+	cat ./logs/wsb.txt
 
 myfsck: fsck.c
 	gcc fsck.c -o myfsck -Wall -Werror -m32
