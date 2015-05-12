@@ -84,7 +84,22 @@ void clearinode(struct dinode * inode) {
 }
 
 void checkinode(struct dinode * inode) {
-	
+
+	/* checks the inode reference count */
+	if(inode->type == 0) {
+		return;
+		/* free the data bitmap bit */		
+	}
+	if(inode->nlink == 0 || inode->nlink >= MAXFILE) {
+		clearinode(inode);	
+	}
+	/* checks the inode type */
+	if(inode->type > 3 || inode->type < 0) {
+		clearinode(inode);
+	}
+	if(inode->size < 0 || inode->size > (sb->size * BSIZE)) {
+		clearinode(inode);
+	}
 }
 
 void setbit(int datablock) {
@@ -190,7 +205,7 @@ int main(int charc, char * argv[]) {
 	int i;
 	for(i = 0; i < sb->ninodes; i++) {
 		assert(read(fsd, inodeList + i, sizeof(struct dinode)) != -1);
-		//printinode(inodeList + i);
+		checkinode(inodeList + i);
 	}
 
 	databitmap = malloc(sb->nblocks / 8 + 1);
@@ -203,8 +218,6 @@ int main(int charc, char * argv[]) {
 	seek(1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */);
 
 	write(fsd, databitmap, BSIZE);
-
-
 
 	close(fsd);	
 
