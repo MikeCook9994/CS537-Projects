@@ -87,8 +87,7 @@ void checkinode(struct dinode * inode) {
 
 	/* checks the inode reference count */
 	if(inode->type == 0) {
-		return;
-		/* free the data bitmap bit */		
+		return;	
 	}
 	if(inode->nlink == 0 || inode->nlink >= MAXFILE) {
 		clearinode(inode);	
@@ -104,7 +103,6 @@ void checkinode(struct dinode * inode) {
 
 void setbit(int datablock) {
 
-	//printf("%d\n", datablock);
 
 	char byte;
 	byte = databitmap[datablock / 8];
@@ -181,7 +179,7 @@ int main(int charc, char * argv[]) {
 	seek(BSIZE);
 
 	/* populates the superblock struct and prints its contents */
-	assert(read(fsd, sb, sizeof(struct superblock)) != -1);
+	peruse(sb, sizeof(struct superblock));
 
 	/* a pointer to size value stored in the superblock that allows the super 
 	   block to be repaired */
@@ -204,7 +202,7 @@ int main(int charc, char * argv[]) {
 	/* populates the list of inodes for future access */
 	int i;
 	for(i = 0; i < sb->ninodes; i++) {
-		assert(read(fsd, inodeList + i, sizeof(struct dinode)) != -1);
+		peruse(inodeList + i, sizeof(struct dinode));
 		checkinode(inodeList + i);
 	}
 

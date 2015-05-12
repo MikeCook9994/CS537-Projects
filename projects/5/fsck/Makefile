@@ -23,6 +23,12 @@ img4:
 	cp ./badimages/image4.img images/
 	cat ./logs/output4.txt
 
+wsb:
+	./myfsck ./images/wrongsizesb.img > ./logs/wrongsizesb.txt
+	rm -f ./images/wrongsizesb.img
+	scp cook@best-linux.cs.wisc.edu:~cs537-1/testing/p5b/images/wrongsizesb.img ./images/.
+	cat ./logs/wrongsizesb.txt
+
 myfsck: fsck.c
 	gcc fsck.c -o myfsck -Wall -Werror -m32
 
