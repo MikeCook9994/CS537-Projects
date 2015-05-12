@@ -1,5 +1,3 @@
-#define BIT_SET(a,b) ((a) |= (1<<(b)))
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -54,6 +52,15 @@ void printSuperBlock(void) {
 	printf("ninodes:\t%d\n\n", sb->ninodes);
 }
 
+void printBitMap(void) {
+
+	int i;
+	for(i = 0; i < sb->nblocks / 8 + 1; i++) {
+		printf("%x ", *(databitmap + i));
+	}
+	printf("\n");
+}
+
 /* sniffs the super block for inconsistent contents. */
 int sniffsb(uint * size, uint nblocks, uint ninodes) {
 
@@ -85,19 +92,6 @@ void clearinode(struct dinode * inode) {
 
 void checkinode(struct dinode * inode) {
 
-	if(inode->type == 0) {
-		return;	
-	}
-	if(inode->nlink == 0 || inode->nlink >= MAXFILE) {
-		clearinode(inode);	
-	}
-	/* checks the inode type */
-	if(inode->type > 3 || inode->type < 0) {
-		clearinode(inode);
-	}
-	if(inode->size < 0 || inode->size > (sb->size * BSIZE)) {
-		clearinode(inode);
-	}
 }
 
 void setbit(int datablock) {
@@ -206,12 +200,21 @@ int main(int charc, char * argv[]) {
 
 	databitmap = malloc(sb->nblocks / 8 + 1);
 	assert(databitmap != NULL);
-	memset(databitmap, 0, sb->nblocks / 8 + 1);
+	
+	seek((1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */) * BSIZE);
+	peruse(databitmap, sb->nblocks / 8 + 1);
+
+	//memset(databitmap, 0, sb->nblocks / 8 + 1);
 
 	/* checks through the inodes to construct a correct inode bitmap */
+	printBitMap();
+	printf("\n");
+
 	constructbitmap();
 
-	seek(1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */);
+	printBitMap();
+
+	seek((1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */) * BSIZE);
 
 	write(fsd, databitmap, BSIZE);
 
