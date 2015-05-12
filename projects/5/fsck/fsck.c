@@ -85,7 +85,6 @@ void clearinode(struct dinode * inode) {
 
 void checkinode(struct dinode * inode) {
 
-	/* checks the inode reference count */
 	if(inode->type == 0) {
 		return;	
 	}
@@ -102,7 +101,6 @@ void checkinode(struct dinode * inode) {
 }
 
 void setbit(int datablock) {
-
 
 	char byte;
 	byte = databitmap[datablock / 8];
