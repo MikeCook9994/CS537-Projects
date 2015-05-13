@@ -53,6 +53,35 @@ void clearinode(struct dinode * inode) {
 	memset(inode, 0, sizeof(struct dinode));
 }
 
+struct dinode * findparentinode(int childinum) {
+	
+	struct dirent * dir;
+	
+	int i, j;
+	for(i = ROOTINO; i < sb->ninodes; i++) {
+		dir = malloc((inodeList + i)->size);
+		seek((inodeList+i)->addrs[0]);
+		peruse(dir, (inodeList + i)->size);
+
+		for(j = 2; j < (inodeList + i)->size / sizeof(struct dirent); j++) {
+			if((dir + j)->inum == childinum)
+				return  (inodeList + i);
+		}	
+	}
+	return NULL;
+}
+
+int getinum(struct dinode * inode) {
+
+	struct dirent * dir;
+	dir = malloc(sizeof(struct dirent));
+
+	seek(inode->addrs[0]);
+	peruse(dir, sizeof(struct dirent));
+
+	return dir->inum;
+}
+
 /* clears references to inodes that were cleared */
 void clearbaddirents(struct dinode * dir) {
 
@@ -76,13 +105,24 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 	if(dir->name[0] != '.' && dir->name[1] != '\0') {
 		dir->name[0] = '.';
 		dir->name[1] = '\0';
+		dir->inum = inumber;
 	}
 
 	if((dir + 1)->name[0] != '.' && (dir + 1)->name[1] != '.' && (dir + 1)->name[2] != '\0') {
 		(dir + 1)->name[0] = '.';
 		(dir + 1)->name[1] = '.';
 		(dir + 1)->name[1] = '\0';
+		
+		struct dinode * parent;
+		parent = malloc(sizeof(struct dinode));
+		assert(parent != NULL);
+		parent = findparentinode(inumber);
+
+		(dir + 1)->inum = getinum(parent);
 	}
+
+	seek(dirinode->addrs[0]);
+	write(fsd, dir, dirinode->size);
 }
 
 /* checks the validity of a inodes fields */
