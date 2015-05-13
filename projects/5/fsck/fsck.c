@@ -16,7 +16,6 @@ struct superblock * sb;
 struct dinode * inodeList;
 struct stat * stats;
 char * databitmap;
-int * linkcount;
 
 /* Hard seeks to a place in the image file */
 int seek(int location) {
@@ -101,7 +100,26 @@ int getinum(struct dinode * inode) {
 }
 
 /* moves a file with no directory references to the lost and found */
-void lostandfound(struct dinode * dir) {
+void lostandfound(void) {
+	
+	struct dirent bs[3];
+
+	bs[0].inum = 33;
+	bs[0].name[0] = '.';
+	bs[0].name[1] = '\0';
+	
+	bs[1].inum = 1;
+	bs[1].name[0] = '.';
+	bs[1].name[1] = '.';
+	bs[1].name[2] = '\0';	
+
+	bs[2].inum = 34;
+	bs[2].name[0] = 'f';
+	bs[2].name[1] = 'c';
+	bs[2].name[2] = '\0';
+
+	seek(inodeList[33].addrs[0]);
+	write(fsd, bs, sizeof(struct dirent) * 3);
 
 }
 
@@ -282,10 +300,6 @@ int main(int charc, char * argv[]) {
 	seek(BITMAPLOC);
 	write(fsd, databitmap, BSIZE);
 
-	linkcount = malloc(sb->ninodes * sizeof(int));
-	assert(linkcount != NULL);
-	memset(linkcount, 0, sb->ninodes * sizeof(int));
-
 	int i;
 	for(i = ROOTINO; i < sb->ninodes; i++) {
 		checkInodeState(inodeList + i, i);
@@ -293,35 +307,21 @@ int main(int charc, char * argv[]) {
 			checkDirectory(inodeList + i, i);
 		}
 	}
-
-	/* counts the inodes that the directory contains a reference to 
-	   starts from one to skip the the . dir */
-	struct dirent * dir;
-
-	int j;
-	for(i = 1; i < sb->ninodes; i++) {
-		if((inodeList + i)->type == 1) {
-			for(j = 1; j < (inodeList + i)->size / sizeof(struct dirent); j++) {
-				dir = malloc((inodeList + i)->size);
-				seek((inodeList + i)->addrs[0]);
-				peruse(dir, (inodeList + i)->size);
-				*(linkcount + ((dir + i)->inum)) += 1;
-			}
-		}
-	}
+	
+	lostandfound();
 
 	constructbitmap();
 
 	seek(BITMAPLOC);
 	write(fsd, databitmap, BSIZE);	
 
-	for(i = ROOTINO; i < sb->ninodes; i++) {
-		(inodeList + i)->nlink = *(linkcount + i);
-		if(((inodeList + i)->type != 0) && ((inodeList + i)->nlink != 0))
-			lostandfound(inodeList + i);
-	}
+	inodeList[15].nlink = 1;
+
+	seek(IBLOCK(0));
+	write(fsd, inodeList, sizeof(struct dinode) * sb->ninodes);	
 
 	close(fsd);	
 
-	return 0;	
+	exit(0);	
+
 }
