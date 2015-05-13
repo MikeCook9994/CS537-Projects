@@ -1,3 +1,6 @@
+#define SUPERBLOCKLOC 1
+#define BITMAPLOC 1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occupied by inodes */ + 1 /* bitmap */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,15 +16,19 @@ struct superblock * sb;
 struct dinode * inodeList;
 struct stat * stats;
 char * databitmap;
+int * linkcount;
+int * badinodes;
+int * allocatedBlocks;
 
 /* Hard seeks to a place in the image file */
 int seek(int location) {
 	int returnval;
-	returnval = lseek(fsd, location, SEEK_SET);
+	returnval = lseek(fsd, location * BSIZE, SEEK_SET);
 	assert(returnval != -1);
 	return returnval;
 }
 
+/* wrapper function for read */
 int peruse(void * buf, int count) {
 	int returnval;
 	returnval = read(fsd, buf, count);
@@ -29,82 +36,7 @@ int peruse(void * buf, int count) {
 	return returnval;
 }
 
-/* prints the contents of an inode */
-void printinode(struct dinode * dinode) {
-	printf("type:\t\t%hd\n", dinode->type); //File type
-	printf("major:\t\t%hd\n", dinode->major); // Major device number
-	printf("minor:\t\t%hd\n", dinode->minor); // Minor device number
-	printf("nlink:\t\t%hd\n", dinode->nlink); // Number of links to the 
-											  //inode on the system
-	printf("size:\t\t%u\n", dinode->size); // Size of the block
-	
-	int i;
-	for(i = 0; i < 13; i++) {
-		printf("addr[%d]:\t0x%x\n", i, dinode->addrs[i]);
-	}
-	printf("\n");	
-}
-
-void printSuperBlock(void) {
-	printf("SUPER BLOCK CONTENTS\n");
-	printf("size:\t\t%d\n", sb->size);
-	printf("nblocks:\t%d\n", sb->nblocks);
-	printf("ninodes:\t%d\n\n", sb->ninodes);
-}
-
-void printBitMap(void) {
-
-	int i;
-	for(i = 0; i < sb->nblocks / 8 + 1; i++) {
-		printf("%x ", *(databitmap + i));
-	}
-	printf("\n");
-}
-
-/* sniffs the super block for inconsistent contents. */
-int sniffsb(uint * size, uint nblocks, uint ninodes) {
-
-	/* repairs the super block by correcting the size value if the 
-	size times block size does not equal the file size */
-	if(*size * BSIZE != (int) stats->st_size) {
-		*size = stats->st_size / BSIZE;
-		seek(BSIZE);
-		write(fsd, size, 4);
-	}
-	/* verifies the size is a multiple of the block size */
-	if(*size % BSIZE != 0)
-		return -1;
-	/* verifies the number of nodes is a multiple of the number of 
-	inodes per block */
-	if(ninodes % IPB != 0)
-		return -1;
-	/* verifies that the total number of blocks is greater than or equal to 
-	the the number of data blocks plus the number of inode blocks */
-	if(nblocks + (ninodes / IPB) > *size)
-		return -1;
-	/* the block doesn't smell */
-	return 0;
-}
-
-void clearinode(struct dinode * inode) {
-	memset(inode, 0, sizeof(struct dinode));
-}
-
-void checkInodeState(struct dinode * inode) {
-
-	/* checks the inode reference count */
-	if(inode->type == 0)
-		return;
-	if(inode->nlink == 0 || inode->nlink >= MAXFILE)
-		clearinode(inode);	
-	/* checks the inode type */
-	if(inode->type > 3 || inode->type < 0)
-		clearinode(inode);
-	if(inode->size < 0 || inode->size > (MAXFILE * BSIZE))
-		clearinode(inode);
-}
-
-
+/* sets a bit in the data bitmap */
 void setbit(int datablock) {
 
 	char byte;
@@ -116,6 +48,66 @@ void setbit(int datablock) {
 	databitmap[datablock / 8] = byte | mask;
 }
 
+/* clears an inodes */
+void clearinode(struct dinode * inode) {
+	memset(inode, 0, sizeof(struct dinode));
+}
+
+/* clears references to inodes that were cleared */
+void clearbaddirents(struct dinode * dir) {
+
+}
+
+/* moves a file with no directory references to the lost and found */
+void lostandfound(struct dinode * dir) {
+
+}
+
+/* checks the directory for the . and .. directories and counts its 
+   references to other inodes */
+void checkDirectory(struct dinode * dirinode, int inumber) {
+
+	struct dirent * dir;
+	dir = malloc(dirinode->size);
+	
+	seek(dirinode->addrs[0]);
+	peruse(dir, dirinode->size);
+
+	if(dir->name[0] != '.' && dir->name[1] != '\0') {
+		dir->name[0] = '.';
+		dir->name[1] = '\0';
+	}
+
+	if((dir + 1)->name[0] != '.' && (dir + 1)->name[1] != '.' && (dir + 1)->name[2] != '\0') {
+		(dir + 1)->name[0] = '.';
+		(dir + 1)->name[1] = '.';
+		(dir + 1)->name[1] = '.';
+	}
+}
+
+/* checks the validity of a inodes fields */
+int checkInodeState(struct dinode * inode) {
+
+	/* checks the inode reference count */
+	if(inode->type == 0)
+		return 0;
+	if(inode->nlink == 0 || inode->nlink >= MAXFILE) {
+		clearinode(inode);
+		return -1;	
+	}
+	/* checks the inode type */
+	if(inode->type > 3 || inode->type < 0) {
+		clearinode(inode);
+		return -1;
+	}
+	if(inode->size < 0 || inode->size > (MAXFILE * BSIZE)) {
+		clearinode(inode);
+		return -1;
+	}
+	return 0;
+}
+
+/* builds a new bit map using the current state of the inodes */
 void constructbitmap(void) {
 
 	struct dinode * tmp;
@@ -123,7 +115,7 @@ void constructbitmap(void) {
 	uint * indirectblock;
 
 	int i;
-	for(i = 0; i < 1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */ + 1 /* garbage bitmap block */; i++) {
+	for(i = 0; i < BITMAPLOC + 1 /* garbage bitmap block */; i++) {
 		setbit(i);
 	}	
 
@@ -145,7 +137,7 @@ void constructbitmap(void) {
 		setbit(addr);
 
 		indirectblock = malloc(BSIZE);
-		seek(addr * BSIZE);
+		seek(addr);
 		peruse(indirectblock, BSIZE);
 		for(j = 0; j < BSIZE / 4; j++) {
 			addr = *(indirectblock + j);
@@ -156,11 +148,37 @@ void constructbitmap(void) {
 	}
 }
 
+/* sniffs the super block for inconsistent contents. */
+int sniffsb(uint * size, uint nblocks, uint ninodes) {
+
+	/* repairs the super block by correcting the size value if the 
+	size times block size does not equal the file size */
+	if(*size * BSIZE != (int) stats->st_size) {
+		*size = stats->st_size / BSIZE;
+		seek(SUPERBLOCKLOC);
+		write(fsd, size, 4);
+	}
+	/* verifies the size is a multiple of the block size */
+	if(*size % BSIZE != 0)
+		return -1;
+	/* verifies the number of nodes is a multiple of the number of 
+	inodes per block */
+	if(ninodes % IPB != 0)
+		return -1;
+	/* verifies that the total number of blocks is greater than or equal to 
+	the the number of data blocks plus the number of inode blocks */
+	if(nblocks + (ninodes / IPB) > *size)
+		return -1;
+	/* the block doesn't smell */
+	return 0;
+}
+
+/* fuck this program */
 int main(int charc, char * argv[]) {
 
 	/* validates that an input file name is provided */
 	if(charc < 2) {
-		printf("No valid system image file name provided.\n");
+		printf("Error!\n");
 		exit(0);
 	}
 
@@ -179,7 +197,7 @@ int main(int charc, char * argv[]) {
 	fstat(fsd, stats);
 
 	/*scans over the FS image to the super block*/
-	seek(BSIZE);
+	seek(SUPERBLOCKLOC);
 
 	/* populates the superblock struct and prints its contents */
 	peruse(sb, sizeof(struct superblock));
@@ -200,7 +218,7 @@ int main(int charc, char * argv[]) {
 	assert(inodeList != NULL);
 
 	/* sets you to the root inode */
-	seek(BSIZE * IBLOCK(0));
+	seek(IBLOCK(0));
 
 	/* populates the list of inodes for future access */
 	peruse(inodeList, sizeof(struct dinode) * sb->ninodes);
@@ -213,19 +231,36 @@ int main(int charc, char * argv[]) {
 	constructbitmap();
 
 	/* writes the bit map to the file */
-	seek((1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */) * BSIZE);
+	seek(BITMAPLOC);
 	write(fsd, databitmap, BSIZE);
 
-	/* handle the inode and directory stuff */
+	linkcount = malloc(sb->ninodes * sizeof(int));
+	assert(linkcount != NULL);
+	memset(linkcount, 0, sb->ninodes * sizeof(int));
+
+	badinodes = malloc(sb->ninodes * sizeof(int));
+	assert(badinodes != NULL);
+
 	int i;
 	for(i = ROOTINO; i < sb->ninodes; i++) {
-		checkInodeState(inodeList + i);
+		if(checkInodeState(inodeList + i) == -1)
+			*(badinodes + i - 1) = i;
+		if((inodeList + i)->type == 1)
+			checkDirectory(inodeList + i, i);
 	}
 
 	constructbitmap();
 
-	seek((1 /* garbage block */ + 1 /* super block */ + (sb->ninodes / IPB) /* number of blocks occuppied by inodes */ + 1 /* bitmap */) * BSIZE);
+	seek(BITMAPLOC);
 	write(fsd, databitmap, BSIZE);	
+
+	for(i = ROOTINO; i < sb->ninodes; i++) {
+		(inodeList + i)->nlink = *(linkcount + i);
+		if(((inodeList + i)->type != 0) && ((inodeList + i)->nlink != 0))
+			lostandfound(inodeList + i);
+		if((inodeList + i)->type == 1)
+			clearbaddirents(inodeList + i);
+	}
 
 	close(fsd);	
 
