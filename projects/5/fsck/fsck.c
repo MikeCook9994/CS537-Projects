@@ -17,8 +17,6 @@ struct dinode * inodeList;
 struct stat * stats;
 char * databitmap;
 int * linkcount;
-int * badinodes;
-int * allocatedBlocks;
 
 /* Hard seeks to a place in the image file */
 int seek(int location) {
@@ -50,6 +48,9 @@ void setbit(int datablock) {
 
 /* clears an inodes and all of its entries in the directory tree*/
 void clearinode(struct dinode * inode, int inodenumber) {
+		
+	printf("bad inode number: %d\n", inodenumber);
+
 	memset(inode, 0, sizeof(struct dinode));
 
 	struct dirent * tmp;
@@ -57,16 +58,21 @@ void clearinode(struct dinode * inode, int inodenumber) {
 	int i, j;
 	for(i = 0; i < sb->ninodes; i++) {
 		if((inodeList + i)->type == 1) {
+			printf("dir inode number: %d\n", i);
 			tmp = malloc((inodeList + i)->size);
+			assert(tmp != NULL);
 			seek((inodeList + i)->addrs[0]);
 			peruse(tmp, (inodeList + i)->size);
 			for(j = 0; j < (inodeList + i)->size / sizeof(struct dirent); j++) {
-				if((tmp + i)->inum == inodenumber)
-					memset((tmp + i), 0, sizeof(struct dirent));
+				printf("dir number: %d\n", (tmp + j)->inum);
+				if((tmp + j)->inum == inodenumber) {
+					printf("cleared inode index: %d\n", j);
+					memset((tmp + j), 0, sizeof(struct dirent));
+				}
 			}
 		}
-		free(tmp);
 	}
+	printf("returning from clear inode\n");
 }
 
 struct dinode * findparentinode(int childinum) {
@@ -114,12 +120,14 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 	peruse(dir, dirinode->size);
 
 	if(dir->name[0] != '.' && dir->name[1] != '\0') {
+		memset(&dir->name, '\0', DIRSIZ);
 		dir->name[0] = '.';
 		dir->name[1] = '\0';
 		dir->inum = inumber;
 	}
 
 	if((dir + 1)->name[0] != '.' && (dir + 1)->name[1] != '.' && (dir + 1)->name[2] != '\0') {
+		memset(&dir->name, '\0', DIRSIZ);
 		(dir + 1)->name[0] = '.';
 		(dir + 1)->name[1] = '.';
 		(dir + 1)->name[1] = '\0';
@@ -134,35 +142,21 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 
 	seek(dirinode->addrs[0]);
 	write(fsd, dir, dirinode->size);
-
-	/* counts the inodes that the directory contains a reference to 
-	   starts from one to skip the the . dir */
-	int i;
-	for(i = 1; i < dirinode->size; i++) {
-		*(linkcount + ((dir + i)->inum)) += 1;
-	}
 }
 
 /* checks the validity of a inodes fields */
-int checkInodeState(struct dinode * inode, int inodenumber) {
+void checkInodeState(struct dinode * inode, int inodenumber) {
 
 	/* checks the inode reference count */
 	if(inode->type == 0)
-		return 0;
-	if(inode->nlink == 0 || inode->nlink >= MAXFILE) {
+		return;
+	if(inode->nlink == 0 || inode->nlink >= MAXFILE)
 		clearinode(inode, inodenumber);
-		return -1;	
-	}
 	/* checks the inode type */
-	if(inode->type > 3 || inode->type < 0) {
+	if(inode->type > 3 || inode->type < 0)
 		clearinode(inode, inodenumber);
-		return -1;
-	}
-	if(inode->size < 0 || inode->size > (MAXFILE * BSIZE)) {
+	if(inode->size < 0 || inode->size > (MAXFILE * BSIZE))
 		clearinode(inode, inodenumber);
-		return -1;
-	}
-	return 0;
 }
 
 /* builds a new bit map using the current state of the inodes */
@@ -197,7 +191,7 @@ void constructbitmap(void) {
 		indirectblock = malloc(BSIZE);
 		seek(addr);
 		peruse(indirectblock, BSIZE);
-		for(j = 0; j < BSIZE / 4; j++) {
+		for(j = 0; j < BSIZE / sizeof(uint); j++) {
 			addr = *(indirectblock + j);
 			if(addr == 0)
 				continue;
@@ -296,15 +290,28 @@ int main(int charc, char * argv[]) {
 	assert(linkcount != NULL);
 	memset(linkcount, 0, sb->ninodes * sizeof(int));
 
-	badinodes = malloc(sb->ninodes * sizeof(int));
-	assert(badinodes != NULL);
-
 	int i;
 	for(i = ROOTINO; i < sb->ninodes; i++) {
-		if(checkInodeState(inodeList + i, i) == -1)
-			*(badinodes + i - 1) = i;
-		if((inodeList + i)->type == 1)
+		checkInodeState(inodeList + i, i);
+		if((inodeList + i)->type == 1) {
 			checkDirectory(inodeList + i, i);
+		}
+	}
+
+	/* counts the inodes that the directory contains a reference to 
+	   starts from one to skip the the . dir */
+	struct dirent * dir;
+
+	int j;
+	for(i = 1; i < sb->ninodes; i++) {
+		if((inodeList + i)->type == 1) {
+			for(j = 1; j < (inodeList + i)->size / sizeof(struct dirent); j++) {
+				dir = malloc((inodeList + i)->size);
+				seek((inodeList + i)->addrs[0]);
+				peruse(dir, (inodeList + i)->size);
+				*(linkcount + ((dir + i)->inum)) += 1;
+			}
+		}
 	}
 
 	constructbitmap();
