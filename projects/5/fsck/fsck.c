@@ -81,7 +81,7 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 	if((dir + 1)->name[0] != '.' && (dir + 1)->name[1] != '.' && (dir + 1)->name[2] != '\0') {
 		(dir + 1)->name[0] = '.';
 		(dir + 1)->name[1] = '.';
-		(dir + 1)->name[1] = '.';
+		(dir + 1)->name[1] = '\0';
 	}
 }
 
