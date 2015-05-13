@@ -48,35 +48,27 @@ void setbit(int datablock) {
 
 /* clears an inodes and all of its entries in the directory tree*/
 void clearinode(struct dinode * inode, int inodenumber) {
-		
-	printf("bad inode number: %d\n", inodenumber);
 
 	memset(inode, 0, sizeof(struct dinode));
 
 	struct dirent * tmp;
 
 	int i, j;
-	for(i = 0; i < sb->ninodes; i++) {
+	for(i = ROOTINO; i < sb->ninodes; i++) {
 		if((inodeList + i)->type == 1) {
-			printf("dir inode number: %d\n", i);
 			tmp = malloc(BSIZE);
 			assert(tmp != NULL);
 			seek((inodeList + i)->addrs[0]);
 			peruse(tmp, (inodeList + i)->size);
 			for(j = 0; j < 32 && (j < (inodeList + i)->size / sizeof(struct dirent)); j++) {
-				printf("dir number: %d\n", (tmp + j)->inum);
 				if((tmp + j)->inum == inodenumber) {
-					printf("cleared inode index: %d\n", j);
 					memset((tmp + j), 0, sizeof(struct dirent));
 				}
 			}
-
 			seek((inodeList + i)->addrs[0]);
-			write(fsd, tmp, BSIZE);	
+			write(fsd, tmp, BSIZE);
 		}
 	}
-
-	printf("returning from clear inode\n");
 }
 
 struct dinode * findparentinode(int childinum) {
