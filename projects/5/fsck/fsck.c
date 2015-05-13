@@ -321,6 +321,9 @@ int main(int charc, char * argv[]) {
 			lostandfound(inodeList + i);
 	}
 
+	seek(IBLOCK(0));
+	write(fsd, inodeList, sizeof(struct dinode) * sb->ninodes)
+
 	close(fsd);	
 
 	return 0;	
