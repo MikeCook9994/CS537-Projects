@@ -322,7 +322,7 @@ int main(int charc, char * argv[]) {
 	}
 
 	seek(IBLOCK(0));
-	write(fsd, inodeList, sizeof(struct dinode) * sb->ninodes)
+	write(fsd, inodeList, sizeof(struct dinode) * sb->ninodes);
 
 	close(fsd);	
 
