@@ -98,11 +98,6 @@ int getinum(struct dinode * inode) {
 	return dir->inum;
 }
 
-/* clears references to inodes that were cleared */
-void clearbaddirents(struct dinode * dir) {
-
-}
-
 /* moves a file with no directory references to the lost and found */
 void lostandfound(struct dinode * dir) {
 
@@ -140,9 +135,10 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 	seek(dirinode->addrs[0]);
 	write(fsd, dir, dirinode->size);
 
-	/* counts the inodes that the directory contains a reference to */
+	/* counts the inodes that the directory contains a reference to 
+	   starts from one to skip the the . dir */
 	int i;
-	for(i = 0; i < dirinode->size; i++) {
+	for(i = 1; i < dirinode->size; i++) {
 		*(linkcount + ((dir + i)->inum)) += 1;
 	}
 }
@@ -320,8 +316,6 @@ int main(int charc, char * argv[]) {
 		(inodeList + i)->nlink = *(linkcount + i);
 		if(((inodeList + i)->type != 0) && ((inodeList + i)->nlink != 0))
 			lostandfound(inodeList + i);
-		if((inodeList + i)->type == 1)
-			clearbaddirents(inodeList + i);
 	}
 
 	close(fsd);	
