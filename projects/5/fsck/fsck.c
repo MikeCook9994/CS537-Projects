@@ -59,19 +59,23 @@ void clearinode(struct dinode * inode, int inodenumber) {
 	for(i = 0; i < sb->ninodes; i++) {
 		if((inodeList + i)->type == 1) {
 			printf("dir inode number: %d\n", i);
-			tmp = malloc((inodeList + i)->size);
+			tmp = malloc(BSIZE);
 			assert(tmp != NULL);
 			seek((inodeList + i)->addrs[0]);
 			peruse(tmp, (inodeList + i)->size);
-			for(j = 0; j < (inodeList + i)->size / sizeof(struct dirent); j++) {
+			for(j = 0; j < 32 && (j < (inodeList + i)->size / sizeof(struct dirent)); j++) {
 				printf("dir number: %d\n", (tmp + j)->inum);
 				if((tmp + j)->inum == inodenumber) {
 					printf("cleared inode index: %d\n", j);
 					memset((tmp + j), 0, sizeof(struct dirent));
 				}
 			}
+
+			seek((inodeList + i)->addrs[0]);
+			write(fsd, tmp, BSIZE);	
 		}
 	}
+
 	printf("returning from clear inode\n");
 }
 
