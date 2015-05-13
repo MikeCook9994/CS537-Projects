@@ -48,9 +48,25 @@ void setbit(int datablock) {
 	databitmap[datablock / 8] = byte | mask;
 }
 
-/* clears an inodes */
-void clearinode(struct dinode * inode) {
+/* clears an inodes and all of its entries in the directory tree*/
+void clearinode(struct dinode * inode, int inodenumber) {
 	memset(inode, 0, sizeof(struct dinode));
+
+	struct dirent * tmp;
+
+	int i, j;
+	for(i = 0; i < sb->ninodes; i++) {
+		if((inodeList + i)->type == 1) {
+			tmp = malloc((inodeList + i)->size);
+			seek((inodeList + i)->addrs[0]);
+			peruse(tmp, (inodeList + i)->size);
+			for(j = 0; j < (inodeList + i)->size / sizeof(struct dirent); j++) {
+				if((tmp + i)->inum == inodenumber)
+					memset((tmp + i), 0, sizeof(struct dirent));
+			}
+		}
+		free(tmp);
+	}
 }
 
 struct dinode * findparentinode(int childinum) {
@@ -123,25 +139,31 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 
 	seek(dirinode->addrs[0]);
 	write(fsd, dir, dirinode->size);
+
+	/* counts the inodes that the directory contains a reference to */
+	int i;
+	for(i = 0; i < dirinode->size; i++) {
+		*(linkcount + ((dir + i)->inum)) += 1;
+	}
 }
 
 /* checks the validity of a inodes fields */
-int checkInodeState(struct dinode * inode) {
+int checkInodeState(struct dinode * inode, int inodenumber) {
 
 	/* checks the inode reference count */
 	if(inode->type == 0)
 		return 0;
 	if(inode->nlink == 0 || inode->nlink >= MAXFILE) {
-		clearinode(inode);
+		clearinode(inode, inodenumber);
 		return -1;	
 	}
 	/* checks the inode type */
 	if(inode->type > 3 || inode->type < 0) {
-		clearinode(inode);
+		clearinode(inode, inodenumber);
 		return -1;
 	}
 	if(inode->size < 0 || inode->size > (MAXFILE * BSIZE)) {
-		clearinode(inode);
+		clearinode(inode, inodenumber);
 		return -1;
 	}
 	return 0;
@@ -283,7 +305,7 @@ int main(int charc, char * argv[]) {
 
 	int i;
 	for(i = ROOTINO; i < sb->ninodes; i++) {
-		if(checkInodeState(inodeList + i) == -1)
+		if(checkInodeState(inodeList + i, i) == -1)
 			*(badinodes + i - 1) = i;
 		if((inodeList + i)->type == 1)
 			checkDirectory(inodeList + i, i);
