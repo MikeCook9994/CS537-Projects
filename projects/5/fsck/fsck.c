@@ -62,6 +62,7 @@ void clearinode(struct dinode * inode, int inodenumber) {
 			for(j = 0; j < 32 && (j < (inodeList + i)->size / sizeof(struct dirent)); j++) {
 				if((tmp + j)->inum == inodenumber) {
 					memset((tmp + j), 0, sizeof(struct dirent));
+					//inode->size -= sizeof(struct dirent);
 				}
 			}
 			seek((inodeList + i)->addrs[0]);
@@ -115,7 +116,7 @@ void lostandfound(void) {
 
 	bs[2].inum = 34;
 	bs[2].name[0] = 'f';
-	bs[2].name[1] = 'c';
+	bs[2].name[1] = 'u';
 	bs[2].name[2] = '\0';
 
 	seek(inodeList[33].addrs[0]);
@@ -132,19 +133,19 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 	
 	seek(dirinode->addrs[0]);
 	peruse(dir, dirinode->size);
-
-	if(dir->name[0] != '.' && dir->name[1] != '\0') {
-		memset(&dir->name, '\0', DIRSIZ);
+	
+	if(dir->name[0] != '.'){
+		memset(&dir->name, 0, DIRSIZ);
 		dir->name[0] = '.';
 		dir->name[1] = '\0';
 		dir->inum = inumber;
 	}
 
-	if((dir + 1)->name[0] != '.' && (dir + 1)->name[1] != '.' && (dir + 1)->name[2] != '\0') {
-		memset(&dir->name, '\0', DIRSIZ);
+	if((dir + 1)->name[0] != '.' || (dir + 1)->name[1] != '.') {
+		memset(&(dir + 1)->name, 0, DIRSIZ);
 		(dir + 1)->name[0] = '.';
 		(dir + 1)->name[1] = '.';
-		(dir + 1)->name[1] = '\0';
+		(dir + 1)->name[2] = '\0';
 		
 		struct dinode * parent;
 		parent = malloc(sizeof(struct dinode));
@@ -153,7 +154,7 @@ void checkDirectory(struct dinode * dirinode, int inumber) {
 
 		(dir + 1)->inum = getinum(parent);
 	}
-
+	
 	seek(dirinode->addrs[0]);
 	write(fsd, dir, dirinode->size);
 }
