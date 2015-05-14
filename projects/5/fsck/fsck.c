@@ -105,7 +105,7 @@ void lostandfound(void) {
 	
 	struct dirent bs[3];
 
-	bs[0].inum = 33;
+	bs[0].inum = 34;
 	bs[0].name[0] = '.';
 	bs[0].name[1] = '\0';
 	
@@ -114,12 +114,15 @@ void lostandfound(void) {
 	bs[1].name[1] = '.';
 	bs[1].name[2] = '\0';	
 
-	bs[2].inum = 34;
+	bs[2].inum = 35;
 	bs[2].name[0] = 'f';
 	bs[2].name[1] = 'u';
 	bs[2].name[2] = '\0';
 
-	seek(inodeList[33].addrs[0]);
+	inodeList[34].nlink = 1;
+	inodeList[34].size = sizeof(struct dirent) * 3;
+
+	seek(inodeList[34].addrs[0]);
 	write(fsd, bs, sizeof(struct dirent) * 3);
 
 }
