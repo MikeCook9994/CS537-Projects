@@ -1,0 +1,8 @@
+I did not work on this project with Giang. It is not reflective of his efforts.
+
+An attempted implementation of a basic unix shell in C. The shell, in its current state, supports cd, pwd, and exit as
+executed from the application from itself. It also currently supports the execution of any other application with arguments.
+It does not currently support IO redirections (>, >>, % (which is an operator for the unix tee utility), | (up to two pipes))
+
+Honestly, I didn't get the project done before the deadline and never found time to finish it. I am currently in the process of
+implementing the program in C++ as an intro to the language.
