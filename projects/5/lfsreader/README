@@ -4,4 +4,5 @@ Name: Giang Nyugen
 CSL-ID: giang
 
 Implementation Details:
-Sankar Please
+The program demonstrates an understanding the general layout and function of a Log Structured File System. Given an LFS image,
+the program can perform ls operations on directories in the image and cat operations on files in the file system.
