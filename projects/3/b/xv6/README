@@ -5,8 +5,8 @@ CSL-ID: giang
 
 Implementation Details:
 Part A of this project inserts an unallocated page at the top of the address
-so null pointer are possible and the thus the program can crash int he event
-that one is deferenced. 
+so null pointer exceptions are possible and the thus the program can crash in 
+the event that one is deferenced. 
 
 This is done simply with 3 changes:
 1) Modifying the exec function such that it starts allocating pages at the
@@ -19,7 +19,7 @@ Part B of the project modifies nearly the entire layout of the user program's
 address space. It moves the stack to the bottom of the userspace and allows
 it to grow dynamically upwards. The Heap now begins directly beneath the code
 segment and grows dynamically downwards. The stack and heap are allowed to
-grow towards eachother until their is exactly a one page gap between them.
+grow towards eachother until there is exactly a one page gap between them.
 
 This is done with a number of changes:
 1) The initial page of the stack is allocated at the last page of the user
@@ -27,7 +27,7 @@ program's vm
 2) copyuvm is modified such that it copies the stack independly of the
 code and heap segments into the proper pages
 3) modifying trap.c so the stack can dynamically allocate pages.
-4) modifyiung growpoc such that the heap will not extend into the page
+4) modifying growpoc such that the heap will not extend into the page
 directly adjacent to the stack
 
 irespective of part A and B, the syscall.c file is modified to make the
