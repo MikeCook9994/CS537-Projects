@@ -4,4 +4,7 @@ Name: Giang Nguyen
 CSL-ID: giang
 
 Implementation Details:
-We did stuff that allocates and frees memory using a heap and slab allocator
+An implementation of malloc of free for a linux system. Two memory allocation methods are implemented. Those being a slab
+allocator and a next fit allocator. The application supports multi threading via locks. 
+
+Known bugs: Occassional concurrency issues that result in a crash
