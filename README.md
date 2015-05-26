@@ -3,6 +3,10 @@ All my CS537 projects. Generally I collaberate with Giang Nguyen for pair progra
 repos and it appears he has almost no commit history, it's because we generally work locally on the same machine loggged into my
 user account.
 
+[Mike's GitHub](https://github.com/MikeCook9994)
+
+[Giang's GitHub](https://github.com/giang12/) | [Ninja Out](http://giang.is/akickassninja)
+
 AyyyyyLmao We Did It
 
 G: (ง ͠° ͟ل͜ ͡°)ง(Fight me Mike )
