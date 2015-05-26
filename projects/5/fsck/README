@@ -4,4 +4,9 @@ Name: Giang Nyugen
 CSL-ID: giang
 
 Implementation Details:
-Perry Please
+An implementation of FSCK, that checks an xv6 file system image for corruption. The program checks the super block for valid
+data and fixes it in the event that it can be done. Following, a number of other checks are made over the inode metadata
+including the file type, the number of references, etc... Other checks are made to ensure that unreferenced inodes are moved
+to the lost and found directory as well as verify that any bad inodes are cleared and their data blocks freed. There is a lot
+of stuff that is checked such that it's difficult to describe all of it here. Honestly, the project was very complicated and 
+was not entirely complete as it was kinda assigned during our finals week. 95% of the work is done and is correct. 
