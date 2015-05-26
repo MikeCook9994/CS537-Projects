@@ -4,4 +4,6 @@ Name: Giang Nyugen
 CSL-ID: giang
 
 Implementation Details:
-We did a lot of stuff and things kinda just started to work over time I guess.
+The goal of the project was to implement threading in the xv6 operating system. This included the modification of existing
+system code as well as the inclusion of new system calls. A user library also needed to be written to provide the user with a
+means of actually creating threads. Conditions Variables and locks were also implemented in the project.
